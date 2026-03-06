@@ -1,14 +1,22 @@
 {
   "name": "endlife-be",
   "version": "1.0.50",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "bun run --watch src/index.ts"
   },
   "dependencies": {
-    "elysia": "latest"
+    "@elysiajs/bearer": "^1.4.3",
+    "@elysiajs/cors": "^1.4.1",
+    "@elysiajs/jwt": "^1.4.1",
+    "@types/pg": "^8.18.0",
+    "bcrypt": "^6.0.0",
+    "elysia": "latest",
+    "pg": "^8.19.0"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "bun-types": "latest"
   },
   "module": "src/index.js"
