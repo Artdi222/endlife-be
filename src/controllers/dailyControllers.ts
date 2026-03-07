@@ -9,7 +9,10 @@ import type {
   SanityResult,
 } from "../types/dailyTypes.js";
 
-// ─── Auto-seed daily_task_progress for a user+date if not yet seeded ──────────
+// activity level — sums reward_point of completed activity tasks, capped at 100
+const ACTIVITY_CATEGORY = "Operation Manual (Daily)";
+
+// seed daily task progress
 const seedDailyProgress = async (
   user_id: number,
   date: string,
@@ -31,14 +34,12 @@ const seedDailyProgress = async (
   );
 };
 
-// get daily checklist — auto-seeds progress rows on first call of the day
+// get daily checklist
 export const getDailyChecklist = async (
   user_id: number,
   date: string,
 ): Promise<DailyChecklistRow[]> => {
   try {
-    // Auto-seed: insert 0-progress rows for all tasks if this is the first
-    // time this user is fetching the checklist for this date
     await seedDailyProgress(user_id, date);
 
     const result = await pool.query<DailyChecklistRow>(
@@ -77,9 +78,39 @@ export const getDailyChecklist = async (
 };
 
 // update task progress
-export const updateTaskProgress = async (payload: UpdateTaskProgressDTO) => {
+// — blocks progress increase on activity tasks if activity level is already 100
+export const updateTaskProgress = async (
+  payload: UpdateTaskProgressDTO,
+): Promise<{ blocked: boolean; data: unknown }> => {
   try {
     const { user_id, task_id, date, current_progress } = payload;
+
+    // Check if this task belongs to the activity category
+    const categoryCheck = await pool.query<{
+      category_name: string;
+      max_progress: number;
+    }>(
+      `
+      SELECT c.name AS category_name, t.max_progress
+      FROM tasks t
+      JOIN groups g ON g.id = t.group_id
+      JOIN categories c ON c.id = g.category_id
+      WHERE t.id = $1
+      `,
+      [task_id],
+    );
+
+    const taskInfo = categoryCheck.rows[0];
+    const isActivityTask = taskInfo?.category_name === ACTIVITY_CATEGORY;
+
+    // If trying to increase progress on an activity task, check current level
+    if (isActivityTask && current_progress > 0) {
+      const activityResult = await getActivityLevel(user_id, date);
+      if (activityResult.activity_level >= 100) {
+        // Block the increase — only allow unchecking (current_progress === 0)
+        return { blocked: true, data: null };
+      }
+    }
 
     const result = await pool.query(
       `
@@ -92,14 +123,14 @@ export const updateTaskProgress = async (payload: UpdateTaskProgressDTO) => {
       [user_id, task_id, date, current_progress],
     );
 
-    return result.rows[0];
+    return { blocked: false, data: result.rows[0] };
   } catch (error) {
     console.error("Error updating task progress:", error);
     throw error;
   }
 };
 
-// activity level
+// activity level — sums reward_point of completed activity tasks, capped at 100
 export const getActivityLevel = async (
   user_id: number,
   date: string,
@@ -115,10 +146,10 @@ export const getActivityLevel = async (
         ON dtp.task_id = t.id
         AND dtp.user_id = $1
         AND dtp.date = $2
-      WHERE c.name = 'Operation Manual (Daily)'
+      WHERE c.name = $3
         AND COALESCE(dtp.current_progress, 0) >= t.max_progress
       `,
-      [user_id, date],
+      [user_id, date, ACTIVITY_CATEGORY],
     );
 
     const total = Number(result.rows[0]?.total_point || 0);
@@ -138,6 +169,7 @@ export const getGlobalProgress = async (
   date: string,
 ): Promise<GlobalProgressResult> => {
   try {
+    // Regular per-category task completion
     const result = await pool.query(
       `
       SELECT
@@ -163,11 +195,27 @@ export const getGlobalProgress = async (
       [user_id, date],
     );
 
-    const detail = result.rows.map((row) => ({
-      category_id: row.id,
-      category_name: row.name,
-      is_completed: Number(row.completed_tasks) === Number(row.total_tasks),
-    }));
+    // Get activity level to override completion for activity category
+    const { activity_level } = await getActivityLevel(user_id, date);
+
+    const detail = result.rows.map((row) => {
+      const isActivityCategory = row.name === ACTIVITY_CATEGORY;
+      const is_completed = isActivityCategory
+        ? activity_level >= 100
+        : Number(row.completed_tasks) === Number(row.total_tasks);
+      const total_tasks = isActivityCategory ? 100 : Number(row.total_tasks);
+      const completed_tasks = isActivityCategory
+        ? Math.min(activity_level, 100)
+        : Number(row.completed_tasks);
+
+      return {
+        category_id: row.id,
+        category_name: row.name,
+        is_completed,
+        total_tasks,
+        completed_tasks,
+      };
+    });
 
     const completedCount = detail.filter((c) => c.is_completed).length;
 
@@ -183,10 +231,9 @@ export const getGlobalProgress = async (
   }
 };
 
-// sanity
-const REGEN_SECONDS = 7 * 60 + 12; // 7 minutes 12 seconds per sanity point
-
 // get sanity
+const REGEN_SECONDS = 7 * 60 + 12;
+
 export const getSanity = async (user_id: number): Promise<SanityResult> => {
   try {
     const result = await pool.query<SanityTracker>(
@@ -213,24 +260,21 @@ export const getSanity = async (user_id: number): Promise<SanityResult> => {
     const now = new Date();
     const last = new Date(sanity.last_update);
     const diffSeconds = Math.floor((now.getTime() - last.getTime()) / 1000);
-
     const regen = Math.floor(diffSeconds / REGEN_SECONDS);
+    const newCurrent = Math.min(
+      sanity.current_sanity + regen,
+      sanity.max_sanity,
+    );
 
-    let newCurrent = Math.min(sanity.current_sanity + regen, sanity.max_sanity);
-
-    let fullInSeconds =
+    const fullInSeconds =
       newCurrent >= sanity.max_sanity
         ? 0
-        : (sanity.max_sanity - newCurrent) * REGEN_SECONDS;
+        : (sanity.max_sanity - newCurrent) * REGEN_SECONDS -
+          (diffSeconds % REGEN_SECONDS);
 
     if (newCurrent !== sanity.current_sanity) {
       await pool.query(
-        `
-        UPDATE sanity_tracker
-        SET current_sanity = $1,
-            last_update = NOW()
-        WHERE user_id = $2
-        `,
+        `UPDATE sanity_tracker SET current_sanity = $1, last_update = NOW() WHERE user_id = $2`,
         [newCurrent, user_id],
       );
     }
@@ -238,7 +282,7 @@ export const getSanity = async (user_id: number): Promise<SanityResult> => {
     return {
       current_sanity: newCurrent,
       max_sanity: sanity.max_sanity,
-      full_in_seconds: fullInSeconds,
+      full_in_seconds: Math.max(0, fullInSeconds),
     };
   } catch (error) {
     console.error("Error getting sanity:", error);
@@ -249,23 +293,29 @@ export const getSanity = async (user_id: number): Promise<SanityResult> => {
 // update sanity
 export const updateSanity = async (
   payload: UpdateSanityDTO,
-): Promise<SanityTracker> => {
+): Promise<SanityResult> => {
   try {
     const { user_id, current_sanity, max_sanity } = payload;
 
-    const result = await pool.query<SanityTracker>(
+    await pool.query(
       `
       UPDATE sanity_tracker
-      SET current_sanity = $1,
-          max_sanity = $2,
-          last_update = NOW()
+      SET current_sanity = $1, max_sanity = $2, last_update = NOW()
       WHERE user_id = $3
-      RETURNING *
       `,
       [current_sanity, max_sanity, user_id],
     );
 
-    return result.rows[0];
+    const fullInSeconds =
+      current_sanity >= max_sanity
+        ? 0
+        : (max_sanity - current_sanity) * REGEN_SECONDS;
+
+    return {
+      current_sanity,
+      max_sanity,
+      full_in_seconds: fullInSeconds,
+    };
   } catch (error) {
     console.error("Error updating sanity:", error);
     throw error;
@@ -273,20 +323,20 @@ export const updateSanity = async (
 };
 
 // empty sanity
-export const emptySanity = async (user_id: number): Promise<SanityTracker> => {
+export const emptySanity = async (user_id: number): Promise<SanityResult> => {
   try {
-    const result = await pool.query<SanityTracker>(
-      `
-      UPDATE sanity_tracker
-      SET current_sanity = 0,
-          last_update = NOW()
-      WHERE user_id = $1
-      RETURNING *
-      `,
+    const maxResult = await pool.query<{ max_sanity: number }>(
+      `UPDATE sanity_tracker SET current_sanity = 0, last_update = NOW() WHERE user_id = $1 RETURNING max_sanity`,
       [user_id],
     );
 
-    return result.rows[0];
+    const max_sanity = maxResult.rows[0]?.max_sanity ?? 0;
+
+    return {
+      current_sanity: 0,
+      max_sanity,
+      full_in_seconds: max_sanity * REGEN_SECONDS,
+    };
   } catch (error) {
     console.error("Error emptying sanity:", error);
     throw error;

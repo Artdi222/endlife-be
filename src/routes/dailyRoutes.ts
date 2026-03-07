@@ -9,14 +9,17 @@ import {
   emptySanity,
 } from "../controllers/dailyControllers.js";
 
-// No auth middleware — daily routes are public
 export const dailyRoutes = new Elysia({ prefix: "/daily" })
-
+  
   // get daily checklist
   .get("/:userId/:date", async ({ status, params }) => {
     try {
       const data = await getDailyChecklist(Number(params.userId), params.date);
-      return status(200, { status: 200, message: "Success to get daily checklist", data });
+      return status(200, {
+        status: 200,
+        message: "Success to get daily checklist",
+        data,
+      });
     } catch {
       return status(500, {
         status: 500,
@@ -31,11 +34,19 @@ export const dailyRoutes = new Elysia({ prefix: "/daily" })
     "/progress",
     async ({ status, body }) => {
       try {
-        const data = await updateTaskProgress(body);
+        const result = await updateTaskProgress(body);
+        if (result.blocked) {
+          return status(403, {
+            status: 403,
+            message:
+              "Activity level is already at 100. Uncheck a task to make room.",
+            data: null,
+          });
+        }
         return status(200, {
           status: 200,
           message: "Progress updated",
-          data,
+          data: result.data,
         });
       } catch {
         return status(500, {
@@ -55,15 +66,11 @@ export const dailyRoutes = new Elysia({ prefix: "/daily" })
     },
   )
 
-  // get activity level
+  // get activity
   .get("/:userId/:date/activity", async ({ status, params }) => {
     try {
       const data = await getActivityLevel(Number(params.userId), params.date);
-      return status(200, {
-        status: 200,
-        message: "Activity fetched",
-        data,
-      });
+      return status(200, { status: 200, message: "Activity fetched", data });
     } catch {
       return status(500, {
         status: 500,
@@ -77,11 +84,7 @@ export const dailyRoutes = new Elysia({ prefix: "/daily" })
   .get("/:userId/:date/global", async ({ status, params }) => {
     try {
       const data = await getGlobalProgress(Number(params.userId), params.date);
-      return status(200, {
-        status: 200,
-        message: "Global fetched",
-        data,
-      });
+      return status(200, { status: 200, message: "Global fetched", data });
     } catch {
       return status(500, {
         status: 500,
@@ -95,11 +98,7 @@ export const dailyRoutes = new Elysia({ prefix: "/daily" })
   .get("/:userId/sanity", async ({ status, params }) => {
     try {
       const data = await getSanity(Number(params.userId));
-      return status(200, {
-        status: 200,
-        message: "Sanity fetched",
-        data,
-      });
+      return status(200, { status: 200, message: "Sanity fetched", data });
     } catch {
       return status(500, {
         status: 500,
@@ -115,11 +114,7 @@ export const dailyRoutes = new Elysia({ prefix: "/daily" })
     async ({ status, body }) => {
       try {
         const data = await updateSanity(body);
-        return status(200, {
-          status: 200,
-          message: "Sanity updated",
-          data,
-        });
+        return status(200, { status: 200, message: "Sanity updated", data });
       } catch {
         return status(500, {
           status: 500,
@@ -141,11 +136,7 @@ export const dailyRoutes = new Elysia({ prefix: "/daily" })
   .post("/:userId/sanity/empty", async ({ status, params }) => {
     try {
       const data = await emptySanity(Number(params.userId));
-      return status(200, {
-        status: 200,
-        message: "Sanity emptied",
-        data,
-      });
+      return status(200, { status: 200, message: "Sanity emptied", data });
     } catch {
       return status(500, {
         status: 500,
