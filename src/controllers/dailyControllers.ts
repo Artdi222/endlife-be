@@ -9,10 +9,9 @@ import type {
   SanityResult,
 } from "../types/dailyTypes.js";
 
-// activity level — sums reward_point of completed activity tasks, capped at 100
 const ACTIVITY_CATEGORY = "Operation Manual (Daily)";
 
-// seed daily task progress
+// seed daily progress
 const seedDailyProgress = async (
   user_id: number,
   date: string,
@@ -58,9 +57,8 @@ export const getDailyChecklist = async (
         COALESCE(dtp.current_progress, 0) AS current_progress
       FROM categories c
       JOIN groups g ON g.category_id = c.id
-      LEFT JOIN sub_groups sg ON sg.group_id = g.id
       JOIN tasks t ON t.group_id = g.id
-        AND (t.sub_group_id IS NULL OR t.sub_group_id = sg.id)
+      LEFT JOIN sub_groups sg ON sg.id = t.sub_group_id
       LEFT JOIN daily_task_progress dtp
         ON dtp.task_id = t.id
         AND dtp.user_id = $1
@@ -78,14 +76,12 @@ export const getDailyChecklist = async (
 };
 
 // update task progress
-// — blocks progress increase on activity tasks if activity level is already 100
 export const updateTaskProgress = async (
   payload: UpdateTaskProgressDTO,
 ): Promise<{ blocked: boolean; data: unknown }> => {
   try {
     const { user_id, task_id, date, current_progress } = payload;
 
-    // Check if this task belongs to the activity category
     const categoryCheck = await pool.query<{
       category_name: string;
       max_progress: number;
@@ -130,7 +126,7 @@ export const updateTaskProgress = async (
   }
 };
 
-// activity level — sums reward_point of completed activity tasks, capped at 100
+// activity level
 export const getActivityLevel = async (
   user_id: number,
   date: string,
@@ -231,9 +227,10 @@ export const getGlobalProgress = async (
   }
 };
 
-// get sanity
+// Sanity
 const REGEN_SECONDS = 7 * 60 + 12;
 
+// get sanity
 export const getSanity = async (user_id: number): Promise<SanityResult> => {
   try {
     const result = await pool.query<SanityTracker>(
