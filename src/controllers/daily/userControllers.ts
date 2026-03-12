@@ -1,5 +1,9 @@
-import pool from "../db/index.js";
-import type { User, CreateUserDTO, UpdateUserDTO } from "../types/userTypes.js";
+import pool from "../../db/index.js";
+import type {
+  User,
+  CreateUserDTO,
+  UpdateUserDTO,
+} from "../../types/daily/userTypes.js";
 
 // get all users
 export const getUsers = async (): Promise<User[]> => {

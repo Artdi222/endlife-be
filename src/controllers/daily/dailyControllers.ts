@@ -1,4 +1,4 @@
-import pool from "../db/index.js";
+import pool from "../../db/index.js";
 import type {
   DailyChecklistRow,
   UpdateTaskProgressDTO,
@@ -7,7 +7,7 @@ import type {
   SanityTracker,
   UpdateSanityDTO,
   SanityResult,
-} from "../types/dailyTypes.js";
+} from "../../types/daily/dailyTypes.js";
 
 const ACTIVITY_CATEGORY = "Operation Manual (Daily)";
 

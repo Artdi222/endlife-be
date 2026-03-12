@@ -4,16 +4,16 @@ import {
   createCategory,
   deleteCategory,
   updateCategory,
-} from "../controllers/categoryControllers.js";
+} from "../../controllers/daily/categoryControllers.js";
 import type {
   CreateCategoryDTO,
   UpdateCategoryDTO,
-} from "../types/categoryTypes.js";
-import { adminMiddleware } from "../middleware/authMiddleware.js";
+} from "../../types/daily/categoryTypes.js";
+import { adminMiddleware } from "../../middleware/authMiddleware.js";
 
 export const categoryRoutes = new Elysia({ prefix: "/categories" })
   .use(adminMiddleware)
-  
+
   // get all categories
   .get("/", async ({ status }) => {
     try {

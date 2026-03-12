@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
-import { getAdminStructure } from "../controllers/adminControllers.js";
-import { adminMiddleware } from "../middleware/authMiddleware.js";
+import { getAdminStructure } from "../../controllers/daily/adminControllers.js";
+import { adminMiddleware } from "../../middleware/authMiddleware.js";
 
 export const adminRoutes = new Elysia({ prefix: "/admin" })
   .use(adminMiddleware)

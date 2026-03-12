@@ -1,7 +1,16 @@
 import { Elysia, t } from "elysia";
-import { getTasksByGroupId, getTaskById, createTask, deleteTask, updateTask } from "../controllers/taskControllers.js";
-import type { CreateTaskDTO, UpdateTaskDTO } from "../types/taskTypes.js";
-import { adminMiddleware } from "../middleware/authMiddleware.js";
+import {
+  getTasksByGroupId,
+  getTaskById,
+  createTask,
+  deleteTask,
+  updateTask,
+} from "../../controllers/daily/taskControllers.js";
+import type {
+  CreateTaskDTO,
+  UpdateTaskDTO,
+} from "../../types/daily/taskTypes.js";
+import { adminMiddleware } from "../../middleware/authMiddleware.js";
 
 export const taskRoutes = new Elysia({ prefix: "/tasks" })
   .use(adminMiddleware)
@@ -10,7 +19,11 @@ export const taskRoutes = new Elysia({ prefix: "/tasks" })
   .get("/group/:groupId", async ({ status, params }) => {
     try {
       const data = await getTasksByGroupId(Number(params.groupId));
-      return status(200, { status: 200, message: "Success to get all tasks", data });
+      return status(200, {
+        status: 200,
+        message: "Success to get all tasks",
+        data,
+      });
     } catch {
       return status(500, {
         status: 500,
@@ -25,7 +38,11 @@ export const taskRoutes = new Elysia({ prefix: "/tasks" })
     try {
       const data = await getTaskById(Number(params.id));
       if (data) {
-        return status(200, { status: 200, message: "Success to get task", data });
+        return status(200, {
+          status: 200,
+          message: "Success to get task",
+          data,
+        });
       } else {
         return status(404, {
           status: 404,
@@ -95,7 +112,10 @@ export const taskRoutes = new Elysia({ prefix: "/tasks" })
     "/:id",
     async ({ status, body, params }) => {
       try {
-        const updated = await updateTask(Number(params.id), body as UpdateTaskDTO);
+        const updated = await updateTask(
+          Number(params.id),
+          body as UpdateTaskDTO,
+        );
         return status(200, {
           status: 200,
           message: "Task updated",
@@ -129,7 +149,7 @@ export const taskRoutes = new Elysia({ prefix: "/tasks" })
       }),
     },
   )
-  
+
   // delete task
   .delete("/:id", async ({ status, params }) => {
     try {

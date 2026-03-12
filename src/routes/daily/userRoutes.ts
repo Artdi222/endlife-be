@@ -5,12 +5,15 @@ import {
   getUsers,
   updateUser,
   deleteUser,
-} from "../controllers/userControllers.js";
-import type { CreateUserDTO, UpdateUserDTO } from "../types/userTypes.js";
-import { adminMiddleware } from "../middleware/authMiddleware.js";
+} from "../../controllers/daily/userControllers.js";
+import type {
+  CreateUserDTO,
+  UpdateUserDTO,
+} from "../../types/daily/userTypes.js";
+import { adminMiddleware } from "../../middleware/authMiddleware.js";
 
 export const userRoutes = new Elysia({ prefix: "/users" })
-  .use(adminMiddleware) 
+  .use(adminMiddleware)
 
   // get all users
   .get("/", async ({ status }) => {

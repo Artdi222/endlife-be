@@ -1,4 +1,4 @@
-import pool from "../db/index.js";
+import pool from "../../db/index.js";
 import type {
   CreateGroupDTO,
   Group,
@@ -6,7 +6,7 @@ import type {
   SubGroup,
   UpdateGroupDTO,
   UpdateSubGroupDTO,
-} from "../types/groupTypes.js";
+} from "../../types/daily/groupTypes.js";
 
 // get groups by category id
 export const getGroupsByCategoryId = async (category_id: number) => {

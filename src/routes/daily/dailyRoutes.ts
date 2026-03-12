@@ -7,10 +7,10 @@ import {
   getSanity,
   updateSanity,
   emptySanity,
-} from "../controllers/dailyControllers.js";
+} from "../../controllers/daily/dailyControllers.js";
 
 export const dailyRoutes = new Elysia({ prefix: "/daily" })
-  
+
   // get daily checklist
   .get("/:userId/:date", async ({ status, params }) => {
     try {

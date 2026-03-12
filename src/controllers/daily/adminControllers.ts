@@ -1,5 +1,5 @@
-import pool from "../db/index.js";
-import type { AdminCategory } from "../types/adminTypes.js";
+import pool from "../../db/index.js";
+import type { AdminCategory } from "../../types/daily/adminTypes.js";
 
 export const getAdminStructure = async (): Promise<AdminCategory[]> => {
   try {

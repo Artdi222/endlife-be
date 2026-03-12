@@ -8,14 +8,14 @@ import {
   updateGroup,
   updateSubGroup,
   getSubGroupsByGroupId,
-} from "../controllers/groupControllers.js";
+} from "../../controllers/daily/groupControllers.js";
 import type {
   CreateGroupDTO,
   CreateSubGroupDTO,
   UpdateGroupDTO,
   UpdateSubGroupDTO,
-} from "../types/groupTypes.js";
-import { adminMiddleware } from "../middleware/authMiddleware.js";
+} from "../../types/daily/groupTypes.js";
+import { adminMiddleware } from "../../middleware/authMiddleware.js";
 
 export const groupRoutes = new Elysia({ prefix: "/groups" })
   .use(adminMiddleware)

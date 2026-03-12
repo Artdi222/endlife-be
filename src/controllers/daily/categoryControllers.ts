@@ -1,11 +1,15 @@
-import pool from "../db/index.js";
-import type { CreateCategoryDTO, Category, UpdateCategoryDTO } from "../types/categoryTypes.js";
+import pool from "../../db/index.js";
+import type {
+  CreateCategoryDTO,
+  Category,
+  UpdateCategoryDTO,
+} from "../../types/daily/categoryTypes.js";
 
 // get all categories
 export const getCategories = async (): Promise<Category[]> => {
   try {
     const result = await pool.query<Category>(
-      `SELECT id, name, order_index FROM categories ORDER BY order_index`
+      `SELECT id, name, order_index FROM categories ORDER BY order_index`,
     );
     return result.rows;
   } catch (error) {
@@ -19,17 +23,16 @@ export const createCategory = async (
   payload: CreateCategoryDTO,
 ): Promise<Category | null> => {
   try {
-  const { name, order_index } = payload;
+    const { name, order_index } = payload;
 
-  const result = await pool.query<Category>(
-    `
+    const result = await pool.query<Category>(
+      `
     INSERT INTO categories (name, order_index)
     VALUES ($1, $2)
     RETURNING *
     `,
-    [name, order_index],
-  );
-
+      [name, order_index],
+    );
 
     return result.rows[0];
   } catch (error) {
@@ -39,7 +42,10 @@ export const createCategory = async (
 };
 
 // update category
-export const updateCategory = async (id: number, payload:   UpdateCategoryDTO) => {
+export const updateCategory = async (
+  id: number,
+  payload: UpdateCategoryDTO,
+) => {
   try {
     const fields: string[] = [];
     const values: any[] = [];
@@ -69,7 +75,6 @@ export const updateCategory = async (id: number, payload:   UpdateCategoryDTO) =
       [...values, id],
     );
 
-
     return result.rows[0];
   } catch (error) {
     console.error("Error updating category:", error);
@@ -81,10 +86,9 @@ export const updateCategory = async (id: number, payload:   UpdateCategoryDTO) =
 export const deleteCategory = async (id: number) => {
   try {
     const result = await pool.query(
-    `DELETE FROM categories WHERE id = $1 RETURNING *`,
-    [id],
-  );
-
+      `DELETE FROM categories WHERE id = $1 RETURNING *`,
+      [id],
+    );
 
     return result.rows[0];
   } catch (error) {
