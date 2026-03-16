@@ -44,7 +44,7 @@ export const characterRoutes = new Elysia({ prefix: "/characters" })
     }
   })
 
-  // POST create character (text fields only, media uploaded separately)
+  // POST create character
   .post(
     "/",
     async ({ status, body }) => {
@@ -67,13 +67,14 @@ export const characterRoutes = new Elysia({ prefix: "/characters" })
         weapon_type: t.String(),
         race: t.Optional(t.String()),
         faction: t.Optional(t.String()),
+        class: t.Optional(t.String()),
         description: t.Optional(t.String()),
         order_index: t.Optional(t.Number()),
       }),
     },
   )
 
-  // PATCH update character text fields
+  // PATCH update character
   .patch(
     "/:id",
     async ({ status, params, body }) => {
@@ -102,6 +103,7 @@ export const characterRoutes = new Elysia({ prefix: "/characters" })
         weapon_type: t.Optional(t.String()),
         race: t.Optional(t.String()),
         faction: t.Optional(t.String()),
+        class: t.Optional(t.String()),
         description: t.Optional(t.String()),
         order_index: t.Optional(t.Number()),
       }),

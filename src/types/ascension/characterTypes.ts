@@ -6,6 +6,7 @@ export interface Character {
   weapon_type: string;
   race: string | null;
   faction: string | null;
+  class: string | null;
   description: string | null;
   icon: string | null;
   splash_art: string | null;
@@ -21,6 +22,7 @@ export interface CreateCharacterDTO {
   weapon_type: string;
   race?: string;
   faction?: string;
+  class?: string;
   description?: string;
   order_index?: number;
 }
@@ -32,6 +34,7 @@ export interface UpdateCharacterDTO {
   weapon_type?: string;
   race?: string;
   faction?: string;
+  class?: string;
   description?: string;
   icon?: string;
   splash_art?: string;
