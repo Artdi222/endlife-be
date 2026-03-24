@@ -1,15 +1,25 @@
 import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
+import { authMiddleware } from "./middleware/authMiddleware.js";
+
+import { authRoutes } from "./routes/authRoutes.js";
+
 import { dailyRoutes } from "./routes/daily/dailyRoutes.js";
 import { taskRoutes } from "./routes/daily/taskRoutes.js";
 import { groupRoutes } from "./routes/daily/groupRoutes.js";
 import { categoryRoutes } from "./routes/daily/categoryRoutes.js";
 import { adminRoutes } from "./routes/daily/adminRoutes.js";
 import { userRoutes } from "./routes/daily/userRoutes.js";
-import { authRoutes } from "./routes/authRoutes.js";
+
 import { characterRoutes } from "./routes/ascension/characterRoutes.js";
 import { weaponRoutes } from "./routes/ascension/weaponRoutes.js";
 import { itemRoutes } from "./routes/ascension/itemRoutes.js";
+import { stageRoutes } from "./routes/ascension/stageRoutes.js";
+import { requirementRoutes } from "./routes/ascension/requirementRoutes.js";
+import { levelCostRoutes } from "./routes/ascension/levelCostRoutes.js";
+import { skillRoutes } from "./routes/ascension/skillRoutes.js";
+import { skillLevelRoutes } from "./routes/ascension/skillLevelRoutes.js";
+import { userPlannerRoutes } from "./routes/ascension/userPlannerRoutes.js";
 
 const app = new Elysia()
   .use(
@@ -21,10 +31,12 @@ const app = new Elysia()
     }),
   )
 
-  // Public routes
+  // ── Public ────────────────────────────────────────────────────────────────
   .use(authRoutes)
 
-  // Protected routes (JWT required)
+  // ── Protected — all routes below require a valid JWT ──────────────────────
+  .use(authMiddleware)
+
   // daily
   .use(adminRoutes)
   .use(userRoutes)
@@ -33,16 +45,21 @@ const app = new Elysia()
   .use(groupRoutes)
   .use(taskRoutes)
 
-  // ascension
+  // ascension — admin / shared data
   .use(characterRoutes)
   .use(weaponRoutes)
   .use(itemRoutes)
+  .use(stageRoutes)
+  .use(requirementRoutes)
+  .use(levelCostRoutes)
+  .use(skillRoutes)
+  .use(skillLevelRoutes)
+
+  // ascension — user planner (self-contained authMiddleware inside, user.user_id is safe)
+  .use(userPlannerRoutes)
 
   .listen(3001);
 
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`,
 );
-
-// Export app type for Eden Treaty on the frontend
-export type App = typeof app;

@@ -22,6 +22,7 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
           user_id: userPayload.user_id,
           username: userPayload.username,
           email: userPayload.email,
+          role: userPayload.role,
         });
 
         return status(201, {
@@ -67,6 +68,7 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
           user_id: userPayload.user_id,
           username: userPayload.username,
           email: userPayload.email,
+          role: userPayload.role,
         });
 
         return status(200, {
