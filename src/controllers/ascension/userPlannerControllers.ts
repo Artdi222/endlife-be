@@ -163,29 +163,6 @@ export const updateUserCharacter = async (
     const characterId = ownerCheck.rows[0].character_id;
     const updates: Record<string, unknown> = { ...dto };
 
-    if (
-      dto.current_ascension_stage === undefined &&
-      dto.current_level !== undefined
-    ) {
-      updates.current_ascension_stage =
-        (await levelToStageNumber(
-          "character",
-          characterId,
-          dto.current_level,
-        )) ?? 0;
-    }
-    if (
-      dto.target_ascension_stage === undefined &&
-      dto.target_level !== undefined
-    ) {
-      updates.target_ascension_stage =
-        (await levelToStageNumber(
-          "character",
-          characterId,
-          dto.target_level,
-        )) ?? 9;
-    }
-
     const fields = Object.entries(updates).filter(([, v]) => v !== undefined);
     if (fields.length === 0) return getUserCharacterById(userCharacterId);
 
@@ -416,20 +393,7 @@ export const updateUserWeapon = async (
     const weaponId = ownerCheck.rows[0].weapon_id;
     const updates: Record<string, unknown> = { ...dto };
 
-    if (
-      dto.current_ascension_stage === undefined &&
-      dto.current_level !== undefined
-    ) {
-      updates.current_ascension_stage =
-        (await levelToStageNumber("weapon", weaponId, dto.current_level)) ?? 0;
-    }
-    if (
-      dto.target_ascension_stage === undefined &&
-      dto.target_level !== undefined
-    ) {
-      updates.target_ascension_stage =
-        (await levelToStageNumber("weapon", weaponId, dto.target_level)) ?? 9;
-    }
+
 
     const fields = Object.entries(updates).filter(([, v]) => v !== undefined);
     if (fields.length === 0) return getUserWeaponById(userWeaponId);

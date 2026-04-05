@@ -20,6 +20,7 @@ import { levelCostRoutes } from "./routes/ascension/levelCostRoutes.js";
 import { skillRoutes } from "./routes/ascension/skillRoutes.js";
 import { skillLevelRoutes } from "./routes/ascension/skillLevelRoutes.js";
 import { userPlannerRoutes } from "./routes/ascension/userPlannerRoutes.js";
+import { newsBannerRoutes } from "./routes/newsBannerRoutes.js";
 
 const app = new Elysia()
   .use(
@@ -57,6 +58,9 @@ const app = new Elysia()
 
   // ascension — user planner (self-contained authMiddleware inside, user.user_id is safe)
   .use(userPlannerRoutes)
+
+  // news banners
+  .use(newsBannerRoutes)
 
   .listen(3001);
 
