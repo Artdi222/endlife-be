@@ -1,159 +1,76 @@
 import { Elysia, t } from "elysia";
-import {
-  getLevelCosts,
-  getLevelCostById,
-  getLevelCostByLevel,
-  getLevelCostRange,
-  upsertLevelCost,
-  bulkUpsertLevelCosts,
-  deleteLevelCost,
-} from "../../controllers/ascension/levelCostControllers.js";
+import { successResponse, errorResponse } from "../../lib/response.js";
+import * as levelCostService from "../../services/ascension/levelCostService.js";
 
-export const levelCostRoutes = new Elysia({ prefix: "/ascension/level-costs" })
+/**
+ * Routes for Level Upgrade Costs
+ */
+export const levelCostRoutes = new Elysia({ prefix: "/level-costs" })
 
-  // GET /ascension/level-costs?entity_type=character
+  // GET /level-costs?entity_type=character
   .get(
     "/",
     async ({ status, query }) => {
       try {
-        const entityType = query.entity_type as "character" | "weapon";
-        if (!["character", "weapon"].includes(entityType)) {
-          return status(400, {
-            status: 400,
-            message: "entity_type must be 'character' or 'weapon'",
-            data: null,
-          });
-        }
-        const data = await getLevelCosts(entityType);
-        return status(200, {
-          status: 200,
-          message: "Level costs fetched",
-          data,
-        });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to fetch level costs",
-          data: null,
-        });
+        const data = await levelCostService.getLevelCosts(
+          query.entity_type as any,
+        );
+        return status(200, successResponse(200, "Level costs fetched", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to fetch level costs"));
       }
     },
     { query: t.Object({ entity_type: t.String() }) },
   )
 
-  // GET /ascension/level-costs/range?entity_type=character&from=1&to=20
+  // GET /level-costs/:id
+  .get("/:id", async ({ status, params }) => {
+    try {
+      const data = await levelCostService.getLevelCostById(Number(params.id));
+      if (!data) return status(404, errorResponse(404, "Level cost not found"));
+      return status(200, successResponse(200, "Level cost fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch level cost"));
+    }
+  })
+
+  // GET /level-costs/range — calculate total for a range
   .get(
     "/range",
     async ({ status, query }) => {
       try {
-        const entityType = query.entity_type as "character" | "weapon";
-        if (!["character", "weapon"].includes(entityType)) {
-          return status(400, {
-            status: 400,
-            message: "entity_type must be 'character' or 'weapon'",
-            data: null,
-          });
-        }
-        const data = await getLevelCostRange(
-          entityType,
-          Number(query.from),
-          Number(query.to),
+        const data = await levelCostService.getLevelCostRange(
+          query.entity_type as any,
+          Number(query.from_level),
+          Number(query.to_level),
         );
-        return status(200, {
-          status: 200,
-          message: "Level cost range fetched",
-          data,
-        });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to fetch range",
-          data: null,
-        });
+        return status(200, successResponse(200, "Level cost range calculated", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to calculate range costs"));
       }
     },
     {
       query: t.Object({
         entity_type: t.String(),
-        from: t.String(),
-        to: t.String(),
+        from_level: t.String(),
+        to_level: t.String(),
       }),
     },
   )
 
-  // GET /ascension/level-costs/by-level?entity_type=character&level=40
-  .get(
-    "/by-level",
-    async ({ status, query }) => {
-      try {
-        const entityType = query.entity_type as "character" | "weapon";
-        if (!["character", "weapon"].includes(entityType)) {
-          return status(400, {
-            status: 400,
-            message: "entity_type must be 'character' or 'weapon'",
-            data: null,
-          });
-        }
-        const data = await getLevelCostByLevel(entityType, Number(query.level));
-        if (!data)
-          return status(404, {
-            status: 404,
-            message: "Level cost not found",
-            data: null,
-          });
-        return status(200, {
-          status: 200,
-          message: "Level cost fetched",
-          data,
-        });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to fetch level cost",
-          data: null,
-        });
-      }
-    },
-    { query: t.Object({ entity_type: t.String(), level: t.String() }) },
-  )
-
-  // GET /ascension/level-costs/:id
-  .get("/:id", async ({ status, params }) => {
-    try {
-      const data = await getLevelCostById(Number(params.id));
-      if (!data)
-        return status(404, {
-          status: 404,
-          message: "Level cost not found",
-          data: null,
-        });
-      return status(200, { status: 200, message: "Level cost fetched", data });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch level cost",
-        data: null,
-      });
-    }
-  })
-
-  // POST /ascension/level-costs — upsert a single level cost
-  .post(
+  // PUT /level-costs — upsert single
+  .put(
     "/",
     async ({ status, body }) => {
       try {
-        const data = await upsertLevelCost(body);
-        return status(200, {
-          status: 200,
-          message: `Level ${body.level} cost saved`,
-          data,
-        });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to save level cost",
-          data: null,
-        });
+        const data = await levelCostService.upsertLevelCost(body);
+        return status(200, successResponse(200, "Level cost saved", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to save level cost"));
       }
     },
     {
@@ -166,29 +83,24 @@ export const levelCostRoutes = new Elysia({ prefix: "/ascension/level-costs" })
     },
   )
 
-  // POST /ascension/level-costs/bulk — seed all 90 levels at once
-  // Body: { entity_type, rows: [{ level, exp_required, credit_cost }] }
+  // POST /level-costs/bulk
   .post(
     "/bulk",
     async ({ status, body }) => {
       try {
-        const data = await bulkUpsertLevelCosts(body.entity_type, body.rows);
-        return status(200, {
-          status: 200,
-          message: `${data.length} level costs saved`,
-          data,
-        });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to bulk save level costs",
-          data: null,
-        });
+        const data = await levelCostService.bulkUpsertLevelCosts(
+          body.entity_type as any,
+          body.rows,
+        );
+        return status(200, successResponse(200, "Level costs bulk updated", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to bulk update level costs"));
       }
     },
     {
       body: t.Object({
-        entity_type: t.Union([t.Literal("character"), t.Literal("weapon")]),
+        entity_type: t.String(),
         rows: t.Array(
           t.Object({
             level: t.Number(),
@@ -200,26 +112,14 @@ export const levelCostRoutes = new Elysia({ prefix: "/ascension/level-costs" })
     },
   )
 
-  // DELETE /ascension/level-costs/:id
+  // DELETE /level-costs/:id
   .delete("/:id", async ({ status, params }) => {
     try {
-      const deleted = await deleteLevelCost(Number(params.id));
-      if (!deleted)
-        return status(404, {
-          status: 404,
-          message: "Level cost not found",
-          data: null,
-        });
-      return status(200, {
-        status: 200,
-        message: "Level cost deleted",
-        data: null,
-      });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to delete level cost",
-        data: null,
-      });
+      const deleted = await levelCostService.deleteLevelCost(Number(params.id));
+      if (!deleted) return status(404, errorResponse(404, "Level cost not found"));
+      return status(200, successResponse(200, "Level cost deleted", null));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to delete level cost"));
     }
   });

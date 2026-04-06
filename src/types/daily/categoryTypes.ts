@@ -4,9 +4,8 @@ export interface CreateCategoryDTO {
 }
 
 export interface UpdateCategoryDTO {
-  id: number;
-  name: string;
-  order_index: number;
+  name?: string;
+  order_index?: number;
 }
 
 export interface Category {

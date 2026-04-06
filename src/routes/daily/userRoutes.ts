@@ -1,59 +1,29 @@
 import { Elysia, t } from "elysia";
-import {
-  createUser,
-  getUserById,
-  getUsers,
-  updateUser,
-  deleteUser,
-} from "../../controllers/daily/userControllers.js";
-import type {
-  CreateUserDTO,
-  UpdateUserDTO,
-} from "../../types/daily/userTypes.js";
-import { adminMiddleware } from "../../middleware/authMiddleware.js";
+import { successResponse, errorResponse } from "../../lib/response.js";
+import * as userService from "../../services/userService.js";
 
 export const userRoutes = new Elysia({ prefix: "/users" })
-  .use(adminMiddleware)
 
   // get all users
   .get("/", async ({ status }) => {
     try {
-      const users = await getUsers();
-      return status(200, {
-        status: 200,
-        message: "Success to get all users",
-        data: users,
-      });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to get all users",
-        data: null,
-      });
+      const data = await userService.getUsers();
+      return status(200, successResponse(200, "Users fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch users"));
     }
   })
 
   // get user by id
   .get("/:id", async ({ status, params }) => {
     try {
-      const user = await getUserById(Number(params.id));
-      if (!user)
-        return status(404, {
-          status: 404,
-          message: "User not found",
-          data: null,
-        });
-      return status(200, {
-        status: 200,
-        message: "Success to get user",
-        data: user,
-      });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to get user",
-        data: null,
-      });
+      const data = await userService.getUserById(Number(params.id));
+      if (!data) return status(404, errorResponse(404, "User not found"));
+      return status(200, successResponse(200, "User fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch user"));
     }
   })
 
@@ -62,25 +32,11 @@ export const userRoutes = new Elysia({ prefix: "/users" })
     "/",
     async ({ status, body }) => {
       try {
-        const user = await createUser(body as CreateUserDTO);
-        return status(201, {
-          status: 201,
-          message: "User created",
-          data: user,
-        });
-      } catch (error: any) {
-        if (error.code === "23505") {
-          return status(409, {
-            status: 409,
-            message: "Username or email already exists",
-            data: null,
-          });
-        }
-        return status(500, {
-          status: 500,
-          message: "Failed to create user",
-          data: null,
-        });
+        const data = await userService.createUser(body);
+        return status(201, successResponse(201, "User created", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to create user"));
       }
     },
     {
@@ -94,44 +50,24 @@ export const userRoutes = new Elysia({ prefix: "/users" })
   )
 
   // update user
-  .put(
+  .patch(
     "/:id",
     async ({ status, params, body }) => {
       try {
-        const user = await updateUser(Number(params.id), body as UpdateUserDTO);
-        return status(200, {
-          status: 200,
-          message: "User updated",
-          data: user,
-        });
-      } catch (error: any) {
-        if (error.message === "No fields to update") {
-          return status(400, {
-            status: 400,
-            message: "No fields to update",
-            data: null,
-          });
-        }
-        if (error.message === "User not found") {
-          return status(404, {
-            status: 404,
-            message: "User not found",
-            data: null,
-          });
-        }
-        return status(500, {
-          status: 500,
-          message: "Failed to update user",
-          data: null,
-        });
+        const data = await userService.updateUser(Number(params.id), body);
+        if (!data) return status(404, errorResponse(404, "User not found"));
+        return status(200, successResponse(200, "User updated", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to update user"));
       }
     },
     {
       body: t.Object({
         username: t.Optional(t.String()),
         email: t.Optional(t.String()),
-        password: t.Optional(t.String()),
         role: t.Optional(t.String()),
+        password: t.Optional(t.String()),
       }),
     },
   )
@@ -139,20 +75,11 @@ export const userRoutes = new Elysia({ prefix: "/users" })
   // delete user
   .delete("/:id", async ({ status, params }) => {
     try {
-      await deleteUser(Number(params.id));
-      return status(200, { status: 200, message: "User deleted", data: null });
-    } catch (error: any) {
-      if (error.message === "User not found") {
-        return status(404, {
-          status: 404,
-          message: "User not found",
-          data: null,
-        });
-      }
-      return status(500, {
-        status: 500,
-        message: "Failed to delete user",
-        data: null,
-      });
+      const deleted = await userService.deleteUser(Number(params.id));
+      if (!deleted) return status(404, errorResponse(404, "User not found"));
+      return status(200, successResponse(200, "User deleted", null));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to delete user"));
     }
   });

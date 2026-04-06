@@ -1,65 +1,43 @@
 import { Elysia, t } from "elysia";
-import {
-  getAllBanners,
-  getActiveBanners,
-  getBannerById,
-  createBanner,
-  updateBanner,
-  uploadBannerImage,
-  deleteBanner,
-} from "../controllers/newsBannerControllers.js";
+import { successResponse, errorResponse } from "../lib/response.js";
+import * as newsBannerService from "../services/newsBannerService.js";
 
+/**
+ * Routes for News Banners (Admin and Public)
+ */
 export const newsBannerRoutes = new Elysia({ prefix: "/news-banners" })
 
   // GET all banners (admin)
   .get("/", async ({ status }) => {
     try {
-      const data = await getAllBanners();
-      return status(200, { status: 200, message: "Banners fetched", data });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch banners",
-        data: null,
-      });
+      const data = await newsBannerService.getAllBanners();
+      return status(200, successResponse(200, "Banners fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch banners"));
     }
   })
 
   // GET active banners only (user home page)
   .get("/active", async ({ status }) => {
     try {
-      const data = await getActiveBanners();
-      return status(200, {
-        status: 200,
-        message: "Active banners fetched",
-        data,
-      });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch active banners",
-        data: null,
-      });
+      const data = await newsBannerService.getActiveBanners();
+      return status(200, successResponse(200, "Active banners fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch active banners"));
     }
   })
 
   // GET banner by id
   .get("/:id", async ({ status, params }) => {
     try {
-      const data = await getBannerById(Number(params.id));
-      if (!data)
-        return status(404, {
-          status: 404,
-          message: "Banner not found",
-          data: null,
-        });
-      return status(200, { status: 200, message: "Banner fetched", data });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch banner",
-        data: null,
-      });
+      const data = await newsBannerService.getBannerById(Number(params.id));
+      if (!data) return status(404, errorResponse(404, "Banner not found"));
+      return status(200, successResponse(200, "Banner fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch banner"));
     }
   })
 
@@ -68,14 +46,11 @@ export const newsBannerRoutes = new Elysia({ prefix: "/news-banners" })
     "/",
     async ({ status, body }) => {
       try {
-        const data = await createBanner(body);
-        return status(201, { status: 201, message: "Banner created", data });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to create banner",
-          data: null,
-        });
+        const data = await newsBannerService.createBanner(body);
+        return status(201, successResponse(201, "Banner created", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to create banner"));
       }
     },
     {
@@ -93,20 +68,12 @@ export const newsBannerRoutes = new Elysia({ prefix: "/news-banners" })
     "/:id",
     async ({ status, params, body }) => {
       try {
-        const data = await updateBanner(Number(params.id), body);
-        if (!data)
-          return status(404, {
-            status: 404,
-            message: "Banner not found",
-            data: null,
-          });
-        return status(200, { status: 200, message: "Banner updated", data });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to update banner",
-          data: null,
-        });
+        const data = await newsBannerService.updateBanner(Number(params.id), body);
+        if (!data) return status(404, errorResponse(404, "Banner not found"));
+        return status(200, successResponse(200, "Banner updated", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to update banner"));
       }
     },
     {
@@ -128,30 +95,18 @@ export const newsBannerRoutes = new Elysia({ prefix: "/news-banners" })
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        const data = await uploadBannerImage(
+        const data = await newsBannerService.uploadBannerImage(
           Number(params.id),
           buffer,
           file.type,
           file.name,
         );
 
-        if (!data)
-          return status(404, {
-            status: 404,
-            message: "Banner not found",
-            data: null,
-          });
-        return status(200, {
-          status: 200,
-          message: "Banner image uploaded",
-          data,
-        });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to upload banner image",
-          data: null,
-        });
+        if (!data) return status(404, errorResponse(404, "Banner not found"));
+        return status(200, successResponse(200, "Banner image uploaded", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to upload banner image"));
       }
     },
     {
@@ -164,23 +119,11 @@ export const newsBannerRoutes = new Elysia({ prefix: "/news-banners" })
   // DELETE banner
   .delete("/:id", async ({ status, params }) => {
     try {
-      const deleted = await deleteBanner(Number(params.id));
-      if (!deleted)
-        return status(404, {
-          status: 404,
-          message: "Banner not found",
-          data: null,
-        });
-      return status(200, {
-        status: 200,
-        message: "Banner deleted",
-        data: null,
-      });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to delete banner",
-        data: null,
-      });
+      const deleted = await newsBannerService.deleteBanner(Number(params.id));
+      if (!deleted) return status(404, errorResponse(404, "Banner not found"));
+      return status(200, successResponse(200, "Banner deleted", null));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to delete banner"));
     }
   });

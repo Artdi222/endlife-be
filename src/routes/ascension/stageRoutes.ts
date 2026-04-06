@@ -1,124 +1,52 @@
 import { Elysia, t } from "elysia";
-import {
-  getStagesForEntity,
-  getStageById,
-  levelToStageNumber,
-  createAscensionStage,
-  updateAscensionStage,
-  deleteAscensionStage,
-} from "../../controllers/ascension/stageControllers.js";
+import { successResponse, errorResponse } from "../../lib/response.js";
+import * as stageService from "../../services/ascension/stageService.js";
 
-export const stageRoutes = new Elysia({ prefix: "/ascension/stages" })
+/**
+ * Routes for Ascension Stages
+ */
+export const stageRoutes = new Elysia({ prefix: "/stages" })
 
-  // GET /ascension/stages?entity_type=character&entity_id=1
+  // GET /stages?entity_type=character&entity_id=1
   .get(
     "/",
     async ({ status, query }) => {
       try {
-        const entityType = query.entity_type as "character" | "weapon";
-        if (!["character", "weapon"].includes(entityType)) {
-          return status(400, {
-            status: 400,
-            message: "entity_type must be 'character' or 'weapon'",
-            data: null,
-          });
-        }
-        const data = await getStagesForEntity(
-          entityType,
+        const data = await stageService.getStagesForEntity(
+          query.entity_type as any,
           Number(query.entity_id),
         );
-        return status(200, { status: 200, message: "Stages fetched", data });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to fetch stages",
-          data: null,
-        });
+        return status(200, successResponse(200, "Stages fetched", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to fetch stages"));
       }
     },
     { query: t.Object({ entity_type: t.String(), entity_id: t.String() }) },
   )
 
-  // GET /ascension/stages/:id
+  // GET /stages/:id
   .get("/:id", async ({ status, params }) => {
     try {
-      const data = await getStageById(Number(params.id));
-      if (!data)
-        return status(404, {
-          status: 404,
-          message: "Stage not found",
-          data: null,
-        });
-      return status(200, { status: 200, message: "Stage fetched", data });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch stage",
-        data: null,
-      });
+      const data = await stageService.getStageById(Number(params.id));
+      if (!data) return status(404, errorResponse(404, "Stage not found"));
+      return status(200, successResponse(200, "Stage fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch stage"));
     }
   })
 
-  // GET /ascension/stages/level-to-stage?entity_type=character&entity_id=1&level=40
-  .get(
-    "/level-to-stage",
-    async ({ status, query }) => {
-      try {
-        const entityType = query.entity_type as "character" | "weapon";
-        if (!["character", "weapon"].includes(entityType)) {
-          return status(400, {
-            status: 400,
-            message: "entity_type must be 'character' or 'weapon'",
-            data: null,
-          });
-        }
-        const stageNumber = await levelToStageNumber(
-          entityType,
-          Number(query.entity_id),
-          Number(query.level),
-        );
-        if (stageNumber === null) {
-          return status(404, {
-            status: 404,
-            message: "No matching stage found for this level",
-            data: null,
-          });
-        }
-        return status(200, {
-          status: 200,
-          message: "Stage number resolved",
-          data: { stage_number: stageNumber },
-        });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to resolve level to stage",
-          data: null,
-        });
-      }
-    },
-    {
-      query: t.Object({
-        entity_type: t.String(),
-        entity_id: t.String(),
-        level: t.String(),
-      }),
-    },
-  )
-
-  // POST /ascension/stages
+  // POST /stages
   .post(
     "/",
     async ({ status, body }) => {
       try {
-        const data = await createAscensionStage(body);
-        return status(201, { status: 201, message: "Stage created", data });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to create stage",
-          data: null,
-        });
+        const data = await stageService.createAscensionStage(body);
+        return status(201, successResponse(201, "Stage created", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to create stage"));
       }
     },
     {
@@ -134,46 +62,40 @@ export const stageRoutes = new Elysia({ prefix: "/ascension/stages" })
     },
   )
 
-  // PATCH /ascension/stages/:id — credit_cost only
+  // PATCH /stages/:id
   .patch(
     "/:id",
     async ({ status, params, body }) => {
       try {
-        const data = await updateAscensionStage(Number(params.id), body);
-        if (!data)
-          return status(404, {
-            status: 404,
-            message: "Stage not found",
-            data: null,
-          });
-        return status(200, { status: 200, message: "Stage updated", data });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to update stage",
-          data: null,
-        });
+        const data = await stageService.updateAscensionStage(
+          Number(params.id),
+          body,
+        );
+        if (!data) return status(404, errorResponse(404, "Stage not found"));
+        return status(200, successResponse(200, "Stage updated", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to update stage"));
       }
     },
-    { body: t.Object({ credit_cost: t.Optional(t.Number()) }) },
+    {
+      body: t.Object({
+        level_from: t.Optional(t.Number()),
+        level_to: t.Optional(t.Number()),
+        is_breakthrough: t.Optional(t.Boolean()),
+        credit_cost: t.Optional(t.Number()),
+      }),
+    },
   )
 
-  // DELETE /ascension/stages/:id — cascades to requirements
+  // DELETE /stages/:id
   .delete("/:id", async ({ status, params }) => {
     try {
-      const deleted = await deleteAscensionStage(Number(params.id));
-      if (!deleted)
-        return status(404, {
-          status: 404,
-          message: "Stage not found",
-          data: null,
-        });
-      return status(200, { status: 200, message: "Stage deleted", data: null });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to delete stage",
-        data: null,
-      });
+      const deleted = await stageService.deleteAscensionStage(Number(params.id));
+      if (!deleted) return status(404, errorResponse(404, "Stage not found"));
+      return status(200, successResponse(200, "Stage deleted", null));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to delete stage"));
     }
   });

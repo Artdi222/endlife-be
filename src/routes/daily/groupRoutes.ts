@@ -1,41 +1,22 @@
 import { Elysia, t } from "elysia";
-import {
-  getGroupsByCategoryId,
-  createGroup,
-  createSubGroup,
-  deleteGroup,
-  deleteSubGroup,
-  updateGroup,
-  updateSubGroup,
-  getSubGroupsByGroupId,
-} from "../../controllers/daily/groupControllers.js";
-import type {
-  CreateGroupDTO,
-  CreateSubGroupDTO,
-  UpdateGroupDTO,
-  UpdateSubGroupDTO,
-} from "../../types/daily/groupTypes.js";
-import { adminMiddleware } from "../../middleware/authMiddleware.js";
+import { successResponse, errorResponse } from "../../lib/response.js";
+import * as groupService from "../../services/daily/groupService.js";
 
 export const groupRoutes = new Elysia({ prefix: "/groups" })
-  .use(adminMiddleware)
 
-  // get all groups by category id
-  .get("/category/:id", async ({ status, params }) => {
+  // get groups by category id
+  .get("/", async ({ status, query }) => {
     try {
-      const groups = await getGroupsByCategoryId(Number(params.id));
-      return status(200, {
-        status: 200,
-        message: "Success to get all groups by category id",
-        data: groups,
-      });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to get groups by category id",
-        data: null,
-      });
+      const data = await groupService.getGroupsByCategoryId(Number(query.category_id));
+      return status(200, successResponse(200, "Groups fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch groups"));
     }
+  }, {
+    query: t.Object({
+      category_id: t.String(),
+    })
   })
 
   // create group
@@ -43,25 +24,11 @@ export const groupRoutes = new Elysia({ prefix: "/groups" })
     "/",
     async ({ status, body }) => {
       try {
-        const { category_id, name, order_index } = body as CreateGroupDTO;
-
-        const newGroup = await createGroup({
-          category_id,
-          name,
-          order_index,
-        });
-
-        return status(201, {
-          status: 201,
-          message: "Group created successfully",
-          data: newGroup,
-        });
-      } catch (error: any) {
-        return status(500, {
-          status: 500,
-          message: "Failed to create group",
-          data: null,
-        });
+        const data = await groupService.createGroup(body);
+        return status(201, successResponse(201, "Group created", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to create group"));
       }
     },
     {
@@ -74,41 +41,23 @@ export const groupRoutes = new Elysia({ prefix: "/groups" })
   )
 
   // update group
-  .put(
+  .patch(
     "/:id",
-    async ({ status, body, params }) => {
+    async ({ status, params, body }) => {
       try {
-        const updated = await updateGroup(
-          Number(params.id),
-          body as UpdateGroupDTO,
-        );
-        return status(200, {
-          status: 200,
-          message: "Group updated",
-          data: updated,
-        });
-      } catch (error: any) {
-        if (error.message === "No fields to update") {
-          return status(400, {
-            status: 400,
-            message: "No fields to update",
-            data: null,
-          });
-        }
-
-        return status(500, {
-          status: 500,
-          message: "Failed to update group",
-          data: null,
-        });
+        const data = await groupService.updateGroup(Number(params.id), body);
+        if (!data) return status(404, errorResponse(404, "Group not found"));
+        return status(200, successResponse(200, "Group updated", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to update group"));
       }
     },
     {
       body: t.Object({
-        id: t.Number(),
-        category_id: t.Number(),
-        name: t.String(),
-        order_index: t.Number(),
+        name: t.Optional(t.String()),
+        order_index: t.Optional(t.Number()),
+        category_id: t.Optional(t.Number()),
       }),
     },
   )
@@ -116,59 +65,42 @@ export const groupRoutes = new Elysia({ prefix: "/groups" })
   // delete group
   .delete("/:id", async ({ status, params }) => {
     try {
-      const deleted = await deleteGroup(Number(params.id));
-      return status(200, {
-        status: 200,
-        message: "Group deleted",
-        data: deleted,
-      });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to delete group",
-        data: null,
-      });
+      const data = await groupService.deleteGroup(Number(params.id));
+      if (!data) return status(404, errorResponse(404, "Group not found"));
+      return status(200, successResponse(200, "Group deleted", null));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to delete group"));
     }
   })
 
+  // ── SUB GROUPS ─────────────────────────────────────────────────────────────
+
   // get sub groups by group id
-  .get("/sub/:groupId", async ({ status, params }) => {
+  .get("/sub-groups", async ({ status, query }) => {
     try {
-      const subGroups = await getSubGroupsByGroupId(Number(params.groupId));
-      return status(200, { status: 200, message: "Success", data: subGroups });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to get sub groups by group id",
-        data: null,
-      });
+      const data = await groupService.getSubGroupsByGroupId(Number(query.group_id));
+      return status(200, successResponse(200, "Sub groups fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch sub groups"));
     }
+  }, {
+    query: t.Object({
+      group_id: t.String(),
+    })
   })
 
   // create sub group
   .post(
-    "/sub",
+    "/sub-groups",
     async ({ status, body }) => {
       try {
-        const { group_id, name, order_index } = body as CreateSubGroupDTO;
-
-        const newSubGroup = await createSubGroup({
-          group_id,
-          name,
-          order_index,
-        });
-
-        return status(201, {
-          status: 201,
-          message: "Sub group created successfully",
-          data: newSubGroup,
-        });
-      } catch (error: any) {
-        return status(500, {
-          status: 500,
-          message: "Failed to create sub group",
-          data: null,
-        });
+        const data = await groupService.createSubGroup(body);
+        return status(201, successResponse(201, "Sub group created", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to create sub group"));
       }
     },
     {
@@ -181,59 +113,35 @@ export const groupRoutes = new Elysia({ prefix: "/groups" })
   )
 
   // update sub group
-  .put(
-    "/sub/:id",
-    async ({ status, body, params }) => {
+  .patch(
+    "/sub-groups/:id",
+    async ({ status, params, body }) => {
       try {
-        const updated = await updateSubGroup(
-          Number(params.id),
-          body as UpdateSubGroupDTO,
-        );
-        return status(200, {
-          status: 200,
-          message: "Sub group updated",
-          data: updated,
-        });
-      } catch (error: any) {
-        if (error.message === "No fields to update") {
-          return status(400, {
-            status: 400,
-            message: "No fields to update",
-            data: null,
-          });
-        }
-
-        return status(500, {
-          status: 500,
-          message: "Failed to update sub group",
-          data: null,
-        });
+        const data = await groupService.updateSubGroup(Number(params.id), body);
+        if (!data) return status(404, errorResponse(404, "Sub group not found"));
+        return status(200, successResponse(200, "Sub group updated", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to update sub group"));
       }
     },
     {
       body: t.Object({
-        id: t.Number(),
-        group_id: t.Number(),
-        name: t.String(),
-        order_index: t.Number(),
+        name: t.Optional(t.String()),
+        order_index: t.Optional(t.Number()),
+        group_id: t.Optional(t.Number()),
       }),
     },
   )
 
   // delete sub group
-  .delete("/sub/:id", async ({ status, params }) => {
+  .delete("/sub-groups/:id", async ({ status, params }) => {
     try {
-      const deleted = await deleteSubGroup(Number(params.id));
-      return status(200, {
-        status: 200,
-        message: "Sub group deleted",
-        data: deleted,
-      });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to delete sub group",
-        data: null,
-      });
+      const data = await groupService.deleteSubGroup(Number(params.id));
+      if (!data) return status(404, errorResponse(404, "Sub group not found"));
+      return status(200, successResponse(200, "Sub group deleted", null));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to delete sub group"));
     }
   });

@@ -1,62 +1,45 @@
 import { Elysia, t } from "elysia";
-import {
-  getAllWeapons,
-  getWeaponById,
-  createWeapon,
-  updateWeapon,
-  uploadWeaponIcon,
-  deleteWeapon,
-} from "../../controllers/ascension/weaponControllers.js";
+import { successResponse, errorResponse } from "../../lib/response.js";
+import * as weaponService from "../../services/ascension/weaponService.js";
 
+/**
+ * Routes for Weapons
+ */
 export const weaponRoutes = new Elysia({ prefix: "/weapons" })
 
-  // GET all weapons
+  // GET /weapons
   .get("/", async ({ status }) => {
     try {
-      const data = await getAllWeapons();
-      return status(200, { status: 200, message: "Weapons fetched", data });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch weapons",
-        data: null,
-      });
+      const data = await weaponService.getAllWeapons();
+      return status(200, successResponse(200, "Weapons fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch weapons"));
     }
   })
 
-  // GET weapon by id
+  // GET /weapons/:id
   .get("/:id", async ({ status, params }) => {
     try {
-      const data = await getWeaponById(Number(params.id));
-      if (!data)
-        return status(404, {
-          status: 404,
-          message: "Weapon not found",
-          data: null,
-        });
-      return status(200, { status: 200, message: "Weapon fetched", data });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch weapon",
-        data: null,
-      });
+      const data = await weaponService.getWeaponById(Number(params.id));
+      if (!data) return status(404, errorResponse(404, "Weapon not found"));
+      return status(200, successResponse(200, "Weapon fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch weapon"));
     }
   })
 
-  // POST create weapon (text fields only, icon uploaded separately)
+  // POST /weapons
   .post(
     "/",
     async ({ status, body }) => {
       try {
-        const data = await createWeapon(body);
-        return status(201, { status: 201, message: "Weapon created", data });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to create weapon",
-          data: null,
-        });
+        const data = await weaponService.createWeapon(body);
+        return status(201, successResponse(201, "Weapon created", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to create weapon"));
       }
     },
     {
@@ -69,25 +52,17 @@ export const weaponRoutes = new Elysia({ prefix: "/weapons" })
     },
   )
 
-  // PATCH update weapon text fields
+  // PATCH /weapons/:id
   .patch(
     "/:id",
     async ({ status, params, body }) => {
       try {
-        const data = await updateWeapon(Number(params.id), body);
-        if (!data)
-          return status(404, {
-            status: 404,
-            message: "Weapon not found",
-            data: null,
-          });
-        return status(200, { status: 200, message: "Weapon updated", data });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to update weapon",
-          data: null,
-        });
+        const data = await weaponService.updateWeapon(Number(params.id), body);
+        if (!data) return status(404, errorResponse(404, "Weapon not found"));
+        return status(200, successResponse(200, "Weapon updated", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to update weapon"));
       }
     },
     {
@@ -100,64 +75,37 @@ export const weaponRoutes = new Elysia({ prefix: "/weapons" })
     },
   )
 
-  // POST upload weapon icon
+  // POST /weapons/:id/icon
   .post(
     "/:id/icon",
     async ({ status, params, body }) => {
       try {
         const file = body.file as File;
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        const data = await uploadWeaponIcon(
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const data = await weaponService.uploadWeaponIcon(
           Number(params.id),
           buffer,
           file.type,
           file.name,
         );
-
-        if (!data)
-          return status(404, {
-            status: 404,
-            message: "Weapon not found",
-            data: null,
-          });
-        return status(200, { status: 200, message: "Icon uploaded", data });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to upload icon",
-          data: null,
-        });
+        if (!data) return status(404, errorResponse(404, "Weapon not found"));
+        return status(200, successResponse(200, "Icon uploaded", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to upload icon"));
       }
     },
-    {
-      body: t.Object({
-        file: t.File(),
-      }),
-    },
+    { body: t.Object({ file: t.File() }) },
   )
 
-  // DELETE weapon
+  // DELETE /weapons/:id
   .delete("/:id", async ({ status, params }) => {
     try {
-      const deleted = await deleteWeapon(Number(params.id));
-      if (!deleted)
-        return status(404, {
-          status: 404,
-          message: "Weapon not found",
-          data: null,
-        });
-      return status(200, {
-        status: 200,
-        message: "Weapon deleted",
-        data: null,
-      });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to delete weapon",
-        data: null,
-      });
+      const deleted = await weaponService.deleteWeapon(Number(params.id));
+      if (!deleted) return status(404, errorResponse(404, "Weapon not found"));
+      return status(200, successResponse(200, "Weapon deleted", null));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to delete weapon"));
     }
   });

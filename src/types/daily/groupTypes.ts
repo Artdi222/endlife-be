@@ -5,10 +5,9 @@ export interface CreateGroupDTO {
 }
 
 export interface UpdateGroupDTO {
-  id: number;
-  category_id: number;
-  name: string;
-  order_index: number;
+  category_id?: number;
+  name?: string;
+  order_index?: number;
 }
 
 export interface Group {
@@ -25,10 +24,9 @@ export interface CreateSubGroupDTO {
 }
 
 export interface UpdateSubGroupDTO {
-  id: number;
-  group_id: number;
-  name: string;
-  order_index: number;
+  group_id?: number;
+  name?: string;
+  order_index?: number;
 }
 
 export interface SubGroup {

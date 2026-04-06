@@ -1,9 +1,12 @@
 import { Elysia, t } from "elysia";
 import { jwt } from "@elysiajs/jwt";
-import { registerUser, loginUser } from "../controllers/authControllers.js";
+import { successResponse, errorResponse } from "../lib/response.js";
+import * as userService from "../services/userService.js";
 
+/**
+ * Routes for Authentication (Register/Login)
+ */
 export const authRoutes = new Elysia({ prefix: "/auth" })
-
   .use(
     jwt({
       name: "jwt",
@@ -16,7 +19,7 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
     "/register",
     async ({ status, body, jwt }) => {
       try {
-        const userPayload = await registerUser(body);
+        const userPayload = await userService.registerUser(body);
 
         const token = await jwt.sign({
           user_id: userPayload.user_id,
@@ -25,27 +28,16 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
           role: userPayload.role,
         });
 
-        return status(201, {
-          status: 201,
-          message: "User registered successfully",
-          data: {
-            token,
-            user: userPayload,
-          },
-        });
+        return status(201, successResponse(201, "User registered successfully", {
+          token,
+          user: userPayload,
+        }));
       } catch (error: any) {
         if (error?.message === "EMAIL_TAKEN") {
-          return status(409, {
-            status: 409,
-            message: "Email already in use",
-            data: null,
-          });
+          return status(409, errorResponse(409, "Email already in use"));
         }
-        return status(500, {
-          status: 500,
-          message: "Failed to register user",
-          data: null,
-        });
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to register user"));
       }
     },
     {
@@ -62,7 +54,7 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
     "/login",
     async ({ status, body, jwt }) => {
       try {
-        const userPayload = await loginUser(body);
+        const userPayload = await userService.loginUser(body);
 
         const token = await jwt.sign({
           user_id: userPayload.user_id,
@@ -71,27 +63,16 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
           role: userPayload.role,
         });
 
-        return status(200, {
-          status: 200,
-          message: "Login successful",
-          data: {
-            token,
-            user: userPayload,
-          },
-        });
+        return status(200, successResponse(200, "Login successful", {
+          token,
+          user: userPayload,
+        }));
       } catch (error: any) {
         if (error?.message === "INVALID_CREDENTIALS") {
-          return status(401, {
-            status: 401,
-            message: "Invalid email or password",
-            data: null,
-          });
+          return status(401, errorResponse(401, "Invalid email or password"));
         }
-        return status(500, {
-          status: 500,
-          message: "Failed to login",
-          data: null,
-        });
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to login"));
       }
     },
     {

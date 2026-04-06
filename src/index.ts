@@ -32,35 +32,32 @@ const app = new Elysia()
     }),
   )
 
-  // ── Public ────────────────────────────────────────────────────────────────
+  // ── Public Routes ──────────────────────────────────────────────────────────
   .use(authRoutes)
-
-  // ── Protected — all routes below require a valid JWT ──────────────────────
-  .use(authMiddleware)
-
-  // daily
-  .use(adminRoutes)
-  .use(userRoutes)
-  .use(dailyRoutes)
+  .use(characterRoutes)
+  .use(weaponRoutes)
+  .use(newsBannerRoutes)
+  .use(itemRoutes)
   .use(categoryRoutes)
   .use(groupRoutes)
   .use(taskRoutes)
-
-  // ascension — admin / shared data
-  .use(characterRoutes)
-  .use(weaponRoutes)
-  .use(itemRoutes)
+  // Shared data for ascension (mostly public GETs)
   .use(stageRoutes)
   .use(requirementRoutes)
   .use(levelCostRoutes)
   .use(skillRoutes)
   .use(skillLevelRoutes)
 
+  // ── Protected Routes — all routes below require a valid JWT ───────────────
+  .use(authMiddleware)
+
+  // daily & users
+  .use(adminRoutes)
+  .use(userRoutes)
+  .use(dailyRoutes)
+
   // ascension — user planner (self-contained authMiddleware inside, user.user_id is safe)
   .use(userPlannerRoutes)
-
-  // news banners
-  .use(newsBannerRoutes)
 
   .listen(3001);
 

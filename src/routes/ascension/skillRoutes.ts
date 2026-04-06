@@ -1,13 +1,10 @@
 import { Elysia, t } from "elysia";
-import {
-  getSkillsForCharacter,
-  getSkillById,
-  createSkill,
-  updateSkill,
-  deleteSkill,
-  uploadSkillIcon,
-} from "../../controllers/ascension/skillControllers.js";
+import { successResponse, errorResponse } from "../../lib/response.js";
+import * as skillService from "../../services/ascension/skillService.js";
 
+/**
+ * Routes for Skills
+ */
 export const skillRoutes = new Elysia({ prefix: "/skills" })
 
   // GET /skills?character_id=1
@@ -15,14 +12,11 @@ export const skillRoutes = new Elysia({ prefix: "/skills" })
     "/",
     async ({ status, query }) => {
       try {
-        const data = await getSkillsForCharacter(Number(query.character_id));
-        return status(200, { status: 200, message: "Skills fetched", data });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to fetch skills",
-          data: null,
-        });
+        const data = await skillService.getSkillsForCharacter(Number(query.character_id));
+        return status(200, successResponse(200, "Skills fetched", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to fetch skills"));
       }
     },
     { query: t.Object({ character_id: t.String() }) },
@@ -31,20 +25,12 @@ export const skillRoutes = new Elysia({ prefix: "/skills" })
   // GET /skills/:id
   .get("/:id", async ({ status, params }) => {
     try {
-      const data = await getSkillById(Number(params.id));
-      if (!data)
-        return status(404, {
-          status: 404,
-          message: "Skill not found",
-          data: null,
-        });
-      return status(200, { status: 200, message: "Skill fetched", data });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch skill",
-        data: null,
-      });
+      const data = await skillService.getSkillById(Number(params.id));
+      if (!data) return status(404, errorResponse(404, "Skill not found"));
+      return status(200, successResponse(200, "Skill fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch skill"));
     }
   })
 
@@ -53,14 +39,11 @@ export const skillRoutes = new Elysia({ prefix: "/skills" })
     "/",
     async ({ status, body }) => {
       try {
-        const data = await createSkill(body);
-        return status(201, { status: 201, message: "Skill created", data });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to create skill",
-          data: null,
-        });
+        const data = await skillService.createSkill(body);
+        return status(201, successResponse(201, "Skill created", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to create skill"));
       }
     },
     {
@@ -83,20 +66,12 @@ export const skillRoutes = new Elysia({ prefix: "/skills" })
     "/:id",
     async ({ status, params, body }) => {
       try {
-        const data = await updateSkill(Number(params.id), body);
-        if (!data)
-          return status(404, {
-            status: 404,
-            message: "Skill not found",
-            data: null,
-          });
-        return status(200, { status: 200, message: "Skill updated", data });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to update skill",
-          data: null,
-        });
+        const data = await skillService.updateSkill(Number(params.id), body);
+        if (!data) return status(404, errorResponse(404, "Skill not found"));
+        return status(200, successResponse(200, "Skill updated", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to update skill"));
       }
     },
     {
@@ -115,23 +90,15 @@ export const skillRoutes = new Elysia({ prefix: "/skills" })
     },
   )
 
-  // DELETE /skills/:id — cascades to skill_levels → skill_level_requirements
+  // DELETE /skills/:id
   .delete("/:id", async ({ status, params }) => {
     try {
-      const deleted = await deleteSkill(Number(params.id));
-      if (!deleted)
-        return status(404, {
-          status: 404,
-          message: "Skill not found",
-          data: null,
-        });
-      return status(200, { status: 200, message: "Skill deleted", data: null });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to delete skill",
-        data: null,
-      });
+      const deleted = await skillService.deleteSkill(Number(params.id));
+      if (!deleted) return status(404, errorResponse(404, "Skill not found"));
+      return status(200, successResponse(200, "Skill deleted", null));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to delete skill"));
     }
   })
 
@@ -142,25 +109,17 @@ export const skillRoutes = new Elysia({ prefix: "/skills" })
       try {
         const file = body.file as File;
         const buffer = Buffer.from(await file.arrayBuffer());
-        const data = await uploadSkillIcon(
+        const data = await skillService.uploadSkillIcon(
           Number(params.id),
           buffer,
           file.type,
           file.name,
         );
-        if (!data)
-          return status(404, {
-            status: 404,
-            message: "Skill not found",
-            data: null,
-          });
-        return status(200, { status: 200, message: "Icon uploaded", data });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to upload icon",
-          data: null,
-        });
+        if (!data) return status(404, errorResponse(404, "Skill not found"));
+        return status(200, successResponse(200, "Icon uploaded", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to upload icon"));
       }
     },
     { body: t.Object({ file: t.File() }) },

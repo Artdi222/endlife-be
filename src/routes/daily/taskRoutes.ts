@@ -1,61 +1,33 @@
 import { Elysia, t } from "elysia";
-import {
-  getTasksByGroupId,
-  getTaskById,
-  createTask,
-  deleteTask,
-  updateTask,
-} from "../../controllers/daily/taskControllers.js";
-import type {
-  CreateTaskDTO,
-  UpdateTaskDTO,
-} from "../../types/daily/taskTypes.js";
-import { adminMiddleware } from "../../middleware/authMiddleware.js";
+import { successResponse, errorResponse } from "../../lib/response.js";
+import * as taskService from "../../services/daily/taskService.js";
 
 export const taskRoutes = new Elysia({ prefix: "/tasks" })
-  .use(adminMiddleware)
 
   // get all tasks by group id
-  .get("/group/:groupId", async ({ status, params }) => {
+  .get("/", async ({ status, query }) => {
     try {
-      const data = await getTasksByGroupId(Number(params.groupId));
-      return status(200, {
-        status: 200,
-        message: "Success to get all tasks",
-        data,
-      });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch tasks by group id",
-        data: null,
-      });
+      const data = await taskService.getTasksByGroupId(Number(query.group_id));
+      return status(200, successResponse(200, "Tasks fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch tasks"));
     }
+  }, {
+    query: t.Object({
+      group_id: t.String(),
+    })
   })
 
   // get task by id
   .get("/:id", async ({ status, params }) => {
     try {
-      const data = await getTaskById(Number(params.id));
-      if (data) {
-        return status(200, {
-          status: 200,
-          message: "Success to get task",
-          data,
-        });
-      } else {
-        return status(404, {
-          status: 404,
-          message: "Task not found",
-          data: null,
-        });
-      }
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch task by id",
-        data: null,
-      });
+      const data = await taskService.getTaskById(Number(params.id));
+      if (!data) return status(404, errorResponse(404, "Task not found"));
+      return status(200, successResponse(200, "Task fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch task"));
     }
   })
 
@@ -64,35 +36,11 @@ export const taskRoutes = new Elysia({ prefix: "/tasks" })
     "/",
     async ({ status, body }) => {
       try {
-        const {
-          group_id,
-          sub_group_id,
-          name,
-          max_progress,
-          reward_point,
-          order_index,
-        } = body as CreateTaskDTO;
-
-        const newTask = await createTask({
-          group_id,
-          sub_group_id,
-          name,
-          max_progress,
-          reward_point,
-          order_index,
-        });
-
-        return status(201, {
-          status: 201,
-          message: "Task created successfully",
-          data: newTask,
-        });
-      } catch (error: any) {
-        return status(500, {
-          status: 500,
-          message: "Failed to create task",
-          data: null,
-        });
+        const data = await taskService.createTask(body);
+        return status(201, successResponse(201, "Task created", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to create task"));
       }
     },
     {
@@ -108,44 +56,26 @@ export const taskRoutes = new Elysia({ prefix: "/tasks" })
   )
 
   // update task
-  .put(
+  .patch(
     "/:id",
-    async ({ status, body, params }) => {
+    async ({ status, params, body }) => {
       try {
-        const updated = await updateTask(
-          Number(params.id),
-          body as UpdateTaskDTO,
-        );
-        return status(200, {
-          status: 200,
-          message: "Task updated",
-          data: updated,
-        });
-      } catch (error: any) {
-        if (error.message === "No fields to update") {
-          return status(400, {
-            status: 400,
-            message: "No fields to update",
-            data: null,
-          });
-        }
-
-        return status(500, {
-          status: 500,
-          message: "Failed to update task",
-          data: null,
-        });
+        const data = await taskService.updateTask(Number(params.id), body);
+        if (!data) return status(404, errorResponse(404, "Task not found"));
+        return status(200, successResponse(200, "Task updated", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to update task"));
       }
     },
     {
       body: t.Object({
-        id: t.Number(),
-        group_id: t.Number(),
+        name: t.Optional(t.String()),
+        max_progress: t.Optional(t.Number()),
+        reward_point: t.Optional(t.Number()),
+        order_index: t.Optional(t.Number()),
+        group_id: t.Optional(t.Number()),
         sub_group_id: t.Optional(t.Number()),
-        name: t.String(),
-        max_progress: t.Number(),
-        reward_point: t.Number(),
-        order_index: t.Number(),
       }),
     },
   )
@@ -153,17 +83,11 @@ export const taskRoutes = new Elysia({ prefix: "/tasks" })
   // delete task
   .delete("/:id", async ({ status, params }) => {
     try {
-      const deleted = await deleteTask(Number(params.id));
-      return status(200, {
-        status: 200,
-        message: "Task deleted",
-        data: deleted,
-      });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to delete task",
-        data: null,
-      });
+      const data = await taskService.deleteTask(Number(params.id));
+      if (!data) return status(404, errorResponse(404, "Task not found"));
+      return status(200, successResponse(200, "Task deleted", null));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to delete task"));
     }
   });

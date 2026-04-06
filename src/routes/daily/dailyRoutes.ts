@@ -1,32 +1,26 @@
 import { Elysia, t } from "elysia";
-import {
-  getDailyChecklist,
-  updateTaskProgress,
-  getActivityLevel,
-  getGlobalProgress,
-  getSanity,
-  updateSanity,
-  emptySanity,
-} from "../../controllers/daily/dailyControllers.js";
+import { successResponse, errorResponse } from "../../lib/response.js";
+import * as dailyService from "../../services/daily/dailyService.js";
 
 export const dailyRoutes = new Elysia({ prefix: "/daily" })
 
   // get daily checklist
-  .get("/:userId/:date", async ({ status, params }) => {
+  .get("/", async ({ status, query }) => {
     try {
-      const data = await getDailyChecklist(Number(params.userId), params.date);
-      return status(200, {
-        status: 200,
-        message: "Success to get daily checklist",
-        data,
-      });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch checklist",
-        data: null,
-      });
+      const data = await dailyService.getDailyChecklist(
+        Number(query.user_id),
+        query.date,
+      );
+      return status(200, successResponse(200, "Daily checklist fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch daily checklist"));
     }
+  }, {
+    query: t.Object({
+      user_id: t.String(),
+      date: t.String(),
+    })
   })
 
   // update task progress
@@ -34,26 +28,14 @@ export const dailyRoutes = new Elysia({ prefix: "/daily" })
     "/progress",
     async ({ status, body }) => {
       try {
-        const result = await updateTaskProgress(body);
-        if (result.blocked) {
-          return status(403, {
-            status: 403,
-            message:
-              "Activity level is already at 100. Uncheck a task to make room.",
-            data: null,
-          });
+        const { blocked, data } = await dailyService.updateTaskProgress(body);
+        if (blocked) {
+          return status(403, errorResponse(403, "Activity level already at maximum"));
         }
-        return status(200, {
-          status: 200,
-          message: "Progress updated",
-          data: result.data,
-        });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to update progress",
-          data: null,
-        });
+        return status(200, successResponse(200, "Task progress updated", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to update task progress"));
       }
     },
     {
@@ -66,45 +48,52 @@ export const dailyRoutes = new Elysia({ prefix: "/daily" })
     },
   )
 
-  // get activity
-  .get("/:userId/:date/activity", async ({ status, params }) => {
+  // get activity level
+  .get("/activity", async ({ status, query }) => {
     try {
-      const data = await getActivityLevel(Number(params.userId), params.date);
-      return status(200, { status: 200, message: "Activity fetched", data });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch activity",
-        data: null,
-      });
+      const data = await dailyService.getActivityLevel(
+        Number(query.user_id),
+        query.date,
+      );
+      return status(200, successResponse(200, "Activity level fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch activity level"));
     }
+  }, {
+    query: t.Object({
+      user_id: t.String(),
+      date: t.String(),
+    })
   })
 
   // get global progress
-  .get("/:userId/:date/global", async ({ status, params }) => {
+  .get("/global-progress", async ({ status, query }) => {
     try {
-      const data = await getGlobalProgress(Number(params.userId), params.date);
-      return status(200, { status: 200, message: "Global fetched", data });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch global progress",
-        data: null,
-      });
+      const data = await dailyService.getGlobalProgress(
+        Number(query.user_id),
+        query.date,
+      );
+      return status(200, successResponse(200, "Global progress fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch global progress"));
     }
+  }, {
+    query: t.Object({
+      user_id: t.String(),
+      date: t.String(),
+    })
   })
 
   // get sanity
-  .get("/:userId/sanity", async ({ status, params }) => {
+  .get("/sanity/:user_id", async ({ status, params }) => {
     try {
-      const data = await getSanity(Number(params.userId));
-      return status(200, { status: 200, message: "Sanity fetched", data });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch sanity",
-        data: null,
-      });
+      const data = await dailyService.getSanity(Number(params.user_id));
+      return status(200, successResponse(200, "Sanity fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch sanity"));
     }
   })
 
@@ -113,14 +102,11 @@ export const dailyRoutes = new Elysia({ prefix: "/daily" })
     "/sanity",
     async ({ status, body }) => {
       try {
-        const data = await updateSanity(body);
-        return status(200, { status: 200, message: "Sanity updated", data });
-      } catch {
-        return status(500, {
-          status: 500,
-          message: "Failed to update sanity",
-          data: null,
-        });
+        const data = await dailyService.updateSanity(body);
+        return status(200, successResponse(200, "Sanity updated", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to update sanity"));
       }
     },
     {
@@ -133,15 +119,12 @@ export const dailyRoutes = new Elysia({ prefix: "/daily" })
   )
 
   // empty sanity
-  .post("/:userId/sanity/empty", async ({ status, params }) => {
+  .post("/sanity/empty/:user_id", async ({ status, params }) => {
     try {
-      const data = await emptySanity(Number(params.userId));
-      return status(200, { status: 200, message: "Sanity emptied", data });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to empty sanity",
-        data: null,
-      });
+      const data = await dailyService.emptySanity(Number(params.user_id));
+      return status(200, successResponse(200, "Sanity emptied", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to empty sanity"));
     }
   });

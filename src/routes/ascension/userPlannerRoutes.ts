@@ -1,101 +1,41 @@
 import { Elysia, t } from "elysia";
-import type { JWTPayload } from "../../types/authTypes.js";
-import {
-  getUserCharacters,
-  getUserCharacterById,
-  addUserCharacter,
-  updateUserCharacter,
-  removeUserCharacter,
-  getUserCharacterSkills,
-  updateUserCharacterSkill,
-  getUserWeapons,
-  getUserWeaponById,
-  addUserWeapon,
-  updateUserWeapon,
-  removeUserWeapon,
-  getUserInventory,
-  getInventoryItem,
-  upsertInventoryItem,
-  bulkUpsertInventory,
-  removeInventoryItem,
-  getPlannerSummary,
-} from "../../controllers/ascension/userPlannerControllers.js";
-import * as jose from "jose";
+import { authMiddleware } from "../../middleware/authMiddleware.js";
+import { successResponse, errorResponse } from "../../lib/response.js";
+import * as userCharacterService from "../../services/ascension/userCharacterService.js";
+import * as userWeaponService from "../../services/ascension/userWeaponService.js";
+import * as inventoryService from "../../services/ascension/inventoryService.js";
+import * as plannerSummaryService from "../../services/ascension/plannerSummaryService.js";
 
-
-// ─── ROUTES ───────────────────────────────────────────────────────────────────
-
+/**
+ * Routes for the User Planner (Characters, Weapons, Inventory, Summary)
+ */
 export const userPlannerRoutes = new Elysia({ prefix: "/user-planner" })
-  .derive(async ({ headers, status }) => {
-    const authHeader = headers["authorization"];
-    const token = authHeader?.startsWith("Bearer ")
-      ? authHeader.slice(7)
-      : null;
-
-    if (!token) {
-      throw status(401, { status: 401, message: "Missing token", data: null });
-    }
-
-    try {
-      const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
-      const { payload } = await jose.jwtVerify(token, secret);
-      return { user: payload as unknown as JWTPayload };
-    } catch {
-      throw status(401, {
-        status: 401,
-        message: "Invalid or expired token",
-        data: null,
-      });
-    }
-  })
+  .use(authMiddleware)
 
   // ── CHARACTERS ─────────────────────────────────────────────────────────────
 
   // GET /user-planner/characters
   .get("/characters", async ({ status, user }) => {
     try {
-      const userId = user.user_id;
-      const data = await getUserCharacters(userId);
-      return status(200, {
-        status: 200,
-        message: "User characters fetched",
-        data,
-      });
+      const data = await userCharacterService.getUserCharacters(user.user_id);
+      return status(200, successResponse(200, "User characters fetched", data));
     } catch (error) {
       console.error(error);
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch user characters",
-        data: null,
-      });
+      return status(500, errorResponse(500, "Failed to fetch user characters"));
     }
   })
 
   // GET /user-planner/characters/:id
   .get("/characters/:id", async ({ status, user, params }) => {
     try {
-      const userId = user.user_id;
-      const data = await getUserCharacterById(Number(params.id));
-      // Verify it belongs to this user
-      if (!data || data.user_id !== userId) {
-        return status(404, {
-          status: 404,
-          message: "User character not found",
-          data: null,
-        });
+      const data = await userCharacterService.getUserCharacterById(Number(params.id));
+      if (!data || data.user_id !== user.user_id) {
+        return status(404, errorResponse(404, "User character not found"));
       }
-      return status(200, {
-        status: 200,
-        message: "User character fetched",
-        data,
-      });
+      return status(200, successResponse(200, "User character fetched", data));
     } catch (error) {
       console.error(error);
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch user character",
-        data: null,
-      });
+      return status(500, errorResponse(500, "Failed to fetch user character"));
     }
   })
 
@@ -104,20 +44,11 @@ export const userPlannerRoutes = new Elysia({ prefix: "/user-planner" })
     "/characters",
     async ({ status, user, body }) => {
       try {
-        const userId = user.user_id;
-        const data = await addUserCharacter(userId, body);
-        return status(201, {
-          status: 201,
-          message: "Character added to plan",
-          data,
-        });
+        const data = await userCharacterService.addUserCharacter(user.user_id, body);
+        return status(201, successResponse(201, "Character added to plan", data));
       } catch (error) {
         console.error(error);
-        return status(500, {
-          status: 500,
-          message: "Failed to add character",
-          data: null,
-        });
+        return status(500, errorResponse(500, "Failed to add character"));
       }
     },
     {
@@ -136,26 +67,16 @@ export const userPlannerRoutes = new Elysia({ prefix: "/user-planner" })
     "/characters/:id",
     async ({ status, user, params, body }) => {
       try {
-        const userId = user.user_id;
-        const data = await updateUserCharacter(Number(params.id), userId, body);
-        if (!data)
-          return status(404, {
-            status: 404,
-            message: "User character not found",
-            data: null,
-          });
-        return status(200, {
-          status: 200,
-          message: "Character plan updated",
-          data,
-        });
+        const data = await userCharacterService.updateUserCharacter(
+          Number(params.id),
+          user.user_id,
+          body,
+        );
+        if (!data) return status(404, errorResponse(404, "User character not found"));
+        return status(200, successResponse(200, "Character plan updated", data));
       } catch (error) {
         console.error(error);
-        return status(500, {
-          status: 500,
-          message: "Failed to update character",
-          data: null,
-        });
+        return status(500, errorResponse(500, "Failed to update character"));
       }
     },
     {
@@ -171,26 +92,15 @@ export const userPlannerRoutes = new Elysia({ prefix: "/user-planner" })
   // DELETE /user-planner/characters/:id
   .delete("/characters/:id", async ({ status, user, params }) => {
     try {
-      const userId = user.user_id;
-      const deleted = await removeUserCharacter(Number(params.id), userId);
-      if (!deleted)
-        return status(404, {
-          status: 404,
-          message: "User character not found",
-          data: null,
-        });
-      return status(200, {
-        status: 200,
-        message: "Character removed from plan",
-        data: null,
-      });
+      const deleted = await userCharacterService.removeUserCharacter(
+        Number(params.id),
+        user.user_id,
+      );
+      if (!deleted) return status(404, errorResponse(404, "User character not found"));
+      return status(200, successResponse(200, "Character removed from plan", null));
     } catch (error) {
       console.error(error);
-      return status(500, {
-        status: 500,
-        message: "Failed to remove character",
-        data: null,
-      });
+      return status(500, errorResponse(500, "Failed to remove character"));
     }
   })
 
@@ -199,44 +109,32 @@ export const userPlannerRoutes = new Elysia({ prefix: "/user-planner" })
   // GET /user-planner/characters/:id/skills
   .get("/characters/:id/skills", async ({ status, user, params }) => {
     try {
-      const userId = user.user_id;
-      const data = await getUserCharacterSkills(Number(params.id), userId);
-      return status(200, { status: 200, message: "Skills fetched", data });
+      const data = await userCharacterService.getUserCharacterSkills(
+        Number(params.id),
+        user.user_id,
+      );
+      return status(200, successResponse(200, "Skills fetched", data));
     } catch (error) {
       console.error(error);
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch skills",
-        data: null,
-      });
+      return status(500, errorResponse(500, "Failed to fetch skills"));
     }
   })
 
-  // PATCH /user-planner/skills/:id — update a single user_character_skill row
+  // PATCH /user-planner/skills/:id
   .patch(
     "/skills/:id",
     async ({ status, user, params, body }) => {
       try {
-        const userId = user.user_id;
-        const data = await updateUserCharacterSkill(
+        const data = await userCharacterService.updateUserCharacterSkill(
           Number(params.id),
-          userId,
+          user.user_id,
           body,
         );
-        if (!data)
-          return status(404, {
-            status: 404,
-            message: "Skill entry not found",
-            data: null,
-          });
-        return status(200, { status: 200, message: "Skill updated", data });
+        if (!data) return status(404, errorResponse(404, "Skill entry not found"));
+        return status(200, successResponse(200, "Skill updated", data));
       } catch (error) {
         console.error(error);
-        return status(500, {
-          status: 500,
-          message: "Failed to update skill",
-          data: null,
-        });
+        return status(500, errorResponse(500, "Failed to update skill"));
       }
     },
     {
@@ -252,43 +150,25 @@ export const userPlannerRoutes = new Elysia({ prefix: "/user-planner" })
   // GET /user-planner/weapons
   .get("/weapons", async ({ status, user }) => {
     try {
-      const userId = user.user_id;
-      const data = await getUserWeapons(userId);
-      return status(200, {
-        status: 200,
-        message: "User weapons fetched",
-        data,
-      });
+      const data = await userWeaponService.getUserWeapons(user.user_id);
+      return status(200, successResponse(200, "User weapons fetched", data));
     } catch (error) {
       console.error(error);
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch user weapons",
-        data: null,
-      });
+      return status(500, errorResponse(500, "Failed to fetch user weapons"));
     }
   })
 
   // GET /user-planner/weapons/:id
   .get("/weapons/:id", async ({ status, user, params }) => {
     try {
-      const userId = user.user_id;
-      const data = await getUserWeaponById(Number(params.id));
-      if (!data || data.user_id !== userId) {
-        return status(404, {
-          status: 404,
-          message: "User weapon not found",
-          data: null,
-        });
+      const data = await userWeaponService.getUserWeaponById(Number(params.id));
+      if (!data || data.user_id !== user.user_id) {
+        return status(404, errorResponse(404, "User weapon not found"));
       }
-      return status(200, { status: 200, message: "User weapon fetched", data });
+      return status(200, successResponse(200, "User weapon fetched", data));
     } catch (error) {
       console.error(error);
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch user weapon",
-        data: null,
-      });
+      return status(500, errorResponse(500, "Failed to fetch user weapon"));
     }
   })
 
@@ -297,20 +177,11 @@ export const userPlannerRoutes = new Elysia({ prefix: "/user-planner" })
     "/weapons",
     async ({ status, user, body }) => {
       try {
-        const userId = user.user_id;
-        const data = await addUserWeapon(userId, body);
-        return status(201, {
-          status: 201,
-          message: "Weapon added to plan",
-          data,
-        });
+        const data = await userWeaponService.addUserWeapon(user.user_id, body);
+        return status(201, successResponse(201, "Weapon added to plan", data));
       } catch (error) {
         console.error(error);
-        return status(500, {
-          status: 500,
-          message: "Failed to add weapon",
-          data: null,
-        });
+        return status(500, errorResponse(500, "Failed to add weapon"));
       }
     },
     {
@@ -329,26 +200,16 @@ export const userPlannerRoutes = new Elysia({ prefix: "/user-planner" })
     "/weapons/:id",
     async ({ status, user, params, body }) => {
       try {
-        const userId = user.user_id;
-        const data = await updateUserWeapon(Number(params.id), userId, body);
-        if (!data)
-          return status(404, {
-            status: 404,
-            message: "User weapon not found",
-            data: null,
-          });
-        return status(200, {
-          status: 200,
-          message: "Weapon plan updated",
-          data,
-        });
+        const data = await userWeaponService.updateUserWeapon(
+          Number(params.id),
+          user.user_id,
+          body,
+        );
+        if (!data) return status(404, errorResponse(404, "User weapon not found"));
+        return status(200, successResponse(200, "Weapon plan updated", data));
       } catch (error) {
         console.error(error);
-        return status(500, {
-          status: 500,
-          message: "Failed to update weapon",
-          data: null,
-        });
+        return status(500, errorResponse(500, "Failed to update weapon"));
       }
     },
     {
@@ -364,26 +225,15 @@ export const userPlannerRoutes = new Elysia({ prefix: "/user-planner" })
   // DELETE /user-planner/weapons/:id
   .delete("/weapons/:id", async ({ status, user, params }) => {
     try {
-      const userId = user.user_id;
-      const deleted = await removeUserWeapon(Number(params.id), userId);
-      if (!deleted)
-        return status(404, {
-          status: 404,
-          message: "User weapon not found",
-          data: null,
-        });
-      return status(200, {
-        status: 200,
-        message: "Weapon removed from plan",
-        data: null,
-      });
+      const deleted = await userWeaponService.removeUserWeapon(
+        Number(params.id),
+        user.user_id,
+      );
+      if (!deleted) return status(404, errorResponse(404, "User weapon not found"));
+      return status(200, successResponse(200, "Weapon removed from plan", null));
     } catch (error) {
       console.error(error);
-      return status(500, {
-        status: 500,
-        message: "Failed to remove weapon",
-        data: null,
-      });
+      return status(500, errorResponse(500, "Failed to remove weapon"));
     }
   })
 
@@ -392,88 +242,55 @@ export const userPlannerRoutes = new Elysia({ prefix: "/user-planner" })
   // GET /user-planner/inventory
   .get("/inventory", async ({ status, user }) => {
     try {
-      const userId = user.user_id;
-      const data = await getUserInventory(userId);
-      return status(200, { status: 200, message: "Inventory fetched", data });
+      const data = await inventoryService.getUserInventory(user.user_id);
+      return status(200, successResponse(200, "Inventory fetched", data));
     } catch (error) {
       console.error(error);
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch inventory",
-        data: null,
-      });
+      return status(500, errorResponse(500, "Failed to fetch inventory"));
     }
   })
 
   // GET /user-planner/inventory/:item_id
   .get("/inventory/:item_id", async ({ status, user, params }) => {
     try {
-      const userId = user.user_id;
-      const data = await getInventoryItem(userId, Number(params.item_id));
-      if (!data)
-        return status(404, {
-          status: 404,
-          message: "Inventory item not found",
-          data: null,
-        });
-      return status(200, {
-        status: 200,
-        message: "Inventory item fetched",
-        data,
-      });
+      const data = await inventoryService.getInventoryItem(user.user_id, Number(params.item_id));
+      if (!data) return status(404, errorResponse(404, "Inventory item not found"));
+      return status(200, successResponse(200, "Inventory item fetched", data));
     } catch (error) {
       console.error(error);
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch inventory item",
-        data: null,
-      });
+      return status(500, errorResponse(500, "Failed to fetch inventory item"));
     }
   })
 
-  // PUT /user-planner/inventory/:item_id — set exact quantity for one item
+  // PUT /user-planner/inventory/:item_id
   .put(
     "/inventory/:item_id",
     async ({ status, user, params, body }) => {
       try {
-        const userId = user.user_id;
-        const data = await upsertInventoryItem(
-          userId,
+        const data = await inventoryService.upsertInventoryItem(
+          user.user_id,
           Number(params.item_id),
           body,
         );
-        return status(200, { status: 200, message: "Inventory updated", data });
+        return status(200, successResponse(200, "Inventory updated", data));
       } catch (error) {
         console.error(error);
-        return status(500, {
-          status: 500,
-          message: "Failed to update inventory",
-          data: null,
-        });
+        return status(500, errorResponse(500, "Failed to update inventory"));
       }
     },
     { body: t.Object({ quantity: t.Number() }) },
   )
 
-  // POST /user-planner/inventory/bulk — update many items at once
+  // POST /user-planner/inventory/bulk
   .post(
     "/inventory/bulk",
     async ({ status, user, body }) => {
       try {
-        const userId = user.user_id;
-        const data = await bulkUpsertInventory(userId, body.items);
-        return status(200, {
-          status: 200,
-          message: "Inventory bulk updated",
-          data,
-        });
+        const data = await inventoryService.bulkUpsertInventory(user.user_id, body.items);
+        return status(200, successResponse(200, "Inventory bulk updated", data));
       } catch (error) {
         console.error(error);
-        return status(500, {
-          status: 500,
-          message: "Failed to bulk update inventory",
-          data: null,
-        });
+        return status(500, errorResponse(500, "Failed to bulk update inventory"));
       }
     },
     {
@@ -483,47 +300,30 @@ export const userPlannerRoutes = new Elysia({ prefix: "/user-planner" })
     },
   )
 
-  // DELETE /user-planner/inventory/:item_id — hard delete the row
+  // DELETE /user-planner/inventory/:item_id
   .delete("/inventory/:item_id", async ({ status, user, params }) => {
     try {
-      const userId = user.user_id;
-      const deleted = await removeInventoryItem(userId, Number(params.item_id));
-      if (!deleted)
-        return status(404, {
-          status: 404,
-          message: "Inventory item not found",
-          data: null,
-        });
-      return status(200, {
-        status: 200,
-        message: "Inventory item removed",
-        data: null,
-      });
+      const deleted = await inventoryService.removeInventoryItem(
+        user.user_id,
+        Number(params.item_id),
+      );
+      if (!deleted) return status(404, errorResponse(404, "Inventory item not found"));
+      return status(200, successResponse(200, "Inventory item removed", null));
     } catch (error) {
       console.error(error);
-      return status(500, {
-        status: 500,
-        message: "Failed to remove inventory item",
-        data: null,
-      });
+      return status(500, errorResponse(500, "Failed to remove inventory item"));
     }
   })
 
   // ── SUMMARY ────────────────────────────────────────────────────────────────
 
   // GET /user-planner/summary
-  // Aggregated materials + credits + EXP across all planned characters/weapons/skills
   .get("/summary", async ({ status, user }) => {
     try {
-      const userId = user.user_id;
-      const data = await getPlannerSummary(userId);
-      return status(200, { status: 200, message: "Summary fetched", data });
+      const data = await plannerSummaryService.getPlannerSummary(user.user_id);
+      return status(200, successResponse(200, "Summary fetched", data));
     } catch (error) {
       console.error(error);
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch summary",
-        data: null,
-      });
+      return status(500, errorResponse(500, "Failed to fetch summary"));
     }
-  })
+  });

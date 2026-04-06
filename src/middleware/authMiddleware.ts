@@ -14,7 +14,7 @@ const jwtPlugin = () =>
 export const authMiddleware = new Elysia({ name: "authMiddleware" })
   .use(bearer())
   .use(jwtPlugin())
-  .derive(async ({ bearer, jwt, status }) => {
+  .derive({ as: "scoped" }, async ({ bearer, jwt, status }) => {
     if (!bearer) {
       throw status(401, {
         status: 401,
@@ -42,7 +42,7 @@ export const authMiddleware = new Elysia({ name: "authMiddleware" })
 export const adminMiddleware = new Elysia({ name: "adminMiddleware" })
   .use(bearer())
   .use(jwtPlugin())
-  .derive(async ({ bearer, jwt, status }) => {
+  .derive({ as: "scoped" }, async ({ bearer, jwt, status }) => {
     if (!bearer) {
       throw status(401, {
         status: 401,

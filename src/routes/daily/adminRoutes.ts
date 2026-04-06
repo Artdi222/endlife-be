@@ -1,25 +1,15 @@
 import { Elysia } from "elysia";
-import { getAdminStructure } from "../../controllers/daily/adminControllers.js";
-import { adminMiddleware } from "../../middleware/authMiddleware.js";
+import { successResponse, errorResponse } from "../../lib/response.js";
+import { getAdminStructure } from "../../services/daily/adminService.js";
 
 export const adminRoutes = new Elysia({ prefix: "/admin" })
-  .use(adminMiddleware)
-  .get(
-  "/structure",
-  async ({ status }) => {
+
+  .get("/structure", async ({ status }) => {
     try {
       const data = await getAdminStructure();
-      return status(200, {
-        status: 200,
-        message: "Admin structure fetched successfully",
-        data,
-      });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to fetch admin structure",
-        data: null,
-      });
+      return status(200, successResponse(200, "Admin structure fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch admin structure"));
     }
-  },
-);
+  });

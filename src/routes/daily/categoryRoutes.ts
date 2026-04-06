@@ -1,34 +1,17 @@
 import { Elysia, t } from "elysia";
-import {
-  getCategories,
-  createCategory,
-  deleteCategory,
-  updateCategory,
-} from "../../controllers/daily/categoryControllers.js";
-import type {
-  CreateCategoryDTO,
-  UpdateCategoryDTO,
-} from "../../types/daily/categoryTypes.js";
-import { adminMiddleware } from "../../middleware/authMiddleware.js";
+import { successResponse, errorResponse } from "../../lib/response.js";
+import * as categoryService from "../../services/daily/categoryService.js";
 
 export const categoryRoutes = new Elysia({ prefix: "/categories" })
-  .use(adminMiddleware)
 
   // get all categories
   .get("/", async ({ status }) => {
     try {
-      const categories = await getCategories();
-      return status(200, {
-        status: 200,
-        message: "Success to get all category",
-        data: categories,
-      });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to get all categories",
-        data: null,
-      });
+      const data = await categoryService.getCategories();
+      return status(200, successResponse(200, "Categories fetched", data));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to fetch categories"));
     }
   })
 
@@ -37,24 +20,11 @@ export const categoryRoutes = new Elysia({ prefix: "/categories" })
     "/",
     async ({ status, body }) => {
       try {
-        const { name, order_index } = body as CreateCategoryDTO;
-
-        const newCategory = await createCategory({
-          name,
-          order_index,
-        });
-
-        return status(201, {
-          status: 201,
-          message: "Category created successfully",
-          data: newCategory,
-        });
-      } catch (error: any) {
-        return status(500, {
-          status: 500,
-          message: "Failed to create category",
-          data: null,
-        });
+        const data = await categoryService.createCategory(body);
+        return status(201, successResponse(201, "Category created", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to create category"));
       }
     },
     {
@@ -66,30 +36,22 @@ export const categoryRoutes = new Elysia({ prefix: "/categories" })
   )
 
   // update category
-  .put(
+  .patch(
     "/:id",
-    async ({ status, body, params }) => {
+    async ({ status, params, body }) => {
       try {
-        const data = await updateCategory(
-          Number(params.id),
-          body as UpdateCategoryDTO,
-        );
-        return status(200, { status: 200, message: "Updated", data });
-      } catch (error: any) {
-        if (error.message === "No fields to update") {
-          return status(400, {
-            status: 400,
-            message: "No fields provided to update",
-            data: null,
-          });
-        }
-        return status(500, { status: 500, message: "Failed", data: null });
+        const data = await categoryService.updateCategory(Number(params.id), body);
+        if (!data) return status(404, errorResponse(404, "Category not found"));
+        return status(200, successResponse(200, "Category updated", data));
+      } catch (error) {
+        console.error(error);
+        return status(500, errorResponse(500, "Failed to update category"));
       }
     },
     {
       body: t.Object({
-        name: t.String(),
-        order_index: t.Number(),
+        name: t.Optional(t.String()),
+        order_index: t.Optional(t.Number()),
       }),
     },
   )
@@ -97,17 +59,11 @@ export const categoryRoutes = new Elysia({ prefix: "/categories" })
   // delete category
   .delete("/:id", async ({ status, params }) => {
     try {
-      const deleted = await deleteCategory(Number(params.id));
-      return status(200, {
-        status: 200,
-        message: "Category deleted",
-        data: deleted,
-      });
-    } catch {
-      return status(500, {
-        status: 500,
-        message: "Failed to delete category",
-        data: null,
-      });
+      const data = await categoryService.deleteCategory(Number(params.id));
+      if (!data) return status(404, errorResponse(404, "Category not found"));
+      return status(200, successResponse(200, "Category deleted", null));
+    } catch (error) {
+      console.error(error);
+      return status(500, errorResponse(500, "Failed to delete category"));
     }
   });
