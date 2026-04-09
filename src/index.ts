@@ -9,7 +9,7 @@ import { taskRoutes } from "./routes/daily/taskRoutes.js";
 import { groupRoutes } from "./routes/daily/groupRoutes.js";
 import { categoryRoutes } from "./routes/daily/categoryRoutes.js";
 import { adminRoutes } from "./routes/daily/adminRoutes.js";
-import { userRoutes } from "./routes/daily/userRoutes.js";
+import { userRoutes } from "./routes/userRoutes.js";
 
 import { characterRoutes } from "./routes/ascension/characterRoutes.js";
 import { weaponRoutes } from "./routes/ascension/weaponRoutes.js";

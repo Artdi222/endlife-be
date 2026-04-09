@@ -1,6 +1,7 @@
 export interface NewsBanner {
   id: number;
   title: string;
+  type: string;
   content: string | null;
   image_url: string | null;
   order_index: number;
@@ -10,6 +11,7 @@ export interface NewsBanner {
 
 export interface CreateNewsBannerDTO {
   title: string;
+  type?: string;
   content?: string;
   order_index?: number;
   is_active?: boolean;
@@ -17,6 +19,7 @@ export interface CreateNewsBannerDTO {
 
 export interface UpdateNewsBannerDTO {
   title?: string;
+  type?: string;
   content?: string;
   order_index?: number;
   is_active?: boolean;

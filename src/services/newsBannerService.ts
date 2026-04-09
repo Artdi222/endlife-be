@@ -43,12 +43,13 @@ export const createBanner = async (
 ): Promise<NewsBanner> => {
   const result = await pool.query<NewsBanner>(
     `
-    INSERT INTO news_banners (title, content, order_index, is_active)
-    VALUES ($1, $2, $3, $4)
+    INSERT INTO news_banners (title, type, content, order_index, is_active)
+    VALUES ($1, $2, $3, $4, $5)
     RETURNING *
     `,
     [
       dto.title,
+      dto.type ?? "news",
       dto.content ?? null,
       dto.order_index ?? 0,
       dto.is_active ?? true,

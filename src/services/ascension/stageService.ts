@@ -89,25 +89,12 @@ export const levelToStageNumber = async (
   entityId: number,
   level: number,
 ): Promise<number | null> => {
-  // Exact match (non-breakthrough preferred)
-  const exact = await pool.query<{ stage_number: number }>(
-    `SELECT stage_number FROM ascension_stages
-      WHERE entity_type = $1 AND entity_id = $2 AND level_to = $3
-      ORDER BY is_breakthrough ASC
-      LIMIT 1`,
-    [entityType, entityId, level],
-  );
-  if (exact.rows[0]) return exact.rows[0].stage_number;
-
-  // Fallback: highest stage whose level_to is still ≤ given level
-  const fallback = await pool.query<{ stage_number: number }>(
-    `SELECT stage_number FROM ascension_stages
-      WHERE entity_type = $1 AND entity_id = $2 AND level_to <= $3
-      ORDER BY stage_number DESC
-      LIMIT 1`,
-    [entityType, entityId, level],
-  );
-  return fallback.rows[0]?.stage_number ?? null;
+  // We now have 4 breakthrough phases corresponding to STAGE_DEFS (Phase 1, 2, 3, 4)
+  if (level > 80) return 4;
+  if (level > 60) return 3;
+  if (level > 40) return 2;
+  if (level > 20) return 1;
+  return 0; // Phase 0 (No breakthroughs completed)
 };
 
 // CREATE STAGE

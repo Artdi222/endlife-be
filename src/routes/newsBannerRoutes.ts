@@ -56,6 +56,7 @@ export const newsBannerRoutes = new Elysia({ prefix: "/news-banners" })
     {
       body: t.Object({
         title: t.String(),
+        type: t.Optional(t.String()),
         content: t.Optional(t.String()),
         order_index: t.Optional(t.Number()),
         is_active: t.Optional(t.Boolean()),
@@ -79,6 +80,7 @@ export const newsBannerRoutes = new Elysia({ prefix: "/news-banners" })
     {
       body: t.Object({
         title: t.Optional(t.String()),
+        type: t.Optional(t.String()),
         content: t.Optional(t.String()),
         order_index: t.Optional(t.Number()),
         is_active: t.Optional(t.Boolean()),

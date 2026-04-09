@@ -135,7 +135,22 @@ export const updateUserCharacter = async (
   );
   if (!ownerCheck.rows[0]) return null;
 
+  const characterId = ownerCheck.rows[0].character_id;
+
+  // Auto-compute ascension stage from level — backend owns stage computation
   const updates: Record<string, unknown> = { ...dto };
+  delete updates.current_ascension_stage;
+  delete updates.target_ascension_stage;
+
+  if (dto.current_level !== undefined) {
+    const stage = await levelToStageNumber("character", characterId, dto.current_level);
+    if (stage !== null) updates.current_ascension_stage = stage;
+  }
+  if (dto.target_level !== undefined) {
+    const stage = await levelToStageNumber("character", characterId, dto.target_level);
+    if (stage !== null) updates.target_ascension_stage = stage;
+  }
+
   const fields = Object.entries(updates).filter(([, v]) => v !== undefined);
   if (fields.length === 0) return getUserCharacterById(userCharacterId);
 

@@ -7,12 +7,12 @@ export * from "./ascension/levelCostTypes.js";
 export * from "./ascension/skillTypes.js";
 export * from "./ascension/userPlannerTypes.js";
 
-// daily 
+// daily
 export * from "./daily/adminTypes.js";
 export * from "./daily/categoryTypes.js";
 export * from "./daily/groupTypes.js";
 export * from "./daily/taskTypes.js";
-export * from "./daily/userTypes.js";
+export * from "./userTypes.js";
 
 // auth
 export * from "./authTypes.js";

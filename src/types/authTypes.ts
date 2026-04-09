@@ -5,6 +5,8 @@ export interface JWTPayload {
   username: string;
   email: string;
   role: UserRole;
+  profile_image?: string | null;
+  profile_banner?: string | null;
 }
 
 export interface RegisterDTO {
@@ -25,6 +27,8 @@ export interface AuthResult {
     username: string;
     email: string;
     role: UserRole;
+    profile_image?: string | null;
+    profile_banner?: string | null;
   };
 }
 
@@ -34,5 +38,7 @@ export interface UserRow {
   email: string;
   password_hash: string;
   role: UserRole;
+  profile_image: string | null;
+  profile_banner: string | null;
   created_at: string;
 }

@@ -88,6 +88,11 @@ export interface PlannerSummary {
   materials: SummaryMaterial[];
   total_credits_needed: string; // BIGINT sum as string
   total_exp_needed: string; // BIGINT sum as string
+  credits_breakdown: {
+    ascension: string; // BIGINT as string
+    skills: string;    // BIGINT as string
+    leveling: string; // BIGINT as string
+  };
 }
 
 // ─── DTOs ─────────────────────────────────────────────────────────────────────

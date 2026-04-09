@@ -12,9 +12,9 @@ import type {
 export const getPlannerSummary = async (
   userId: number,
 ): Promise<PlannerSummary> => {
+   // 1. Fetch normal materials
   const materialsResult = await pool.query<SummaryMaterial>(
     `WITH
-      -- 1. Character ascension materials
       char_asc_mats AS (
         SELECT ar.item_id, SUM(ar.quantity)::BIGINT AS qty
         FROM user_characters uc
@@ -27,7 +27,6 @@ export const getPlannerSummary = async (
         WHERE uc.user_id = $1
         GROUP BY ar.item_id
       ),
-      -- 2. Weapon ascension materials
       weapon_asc_mats AS (
         SELECT ar.item_id, SUM(ar.quantity)::BIGINT AS qty
         FROM user_weapons uw
@@ -40,7 +39,6 @@ export const getPlannerSummary = async (
         WHERE uw.user_id = $1
         GROUP BY ar.item_id
       ),
-      -- 3. Skill level materials
       skill_mats AS (
         SELECT slr.item_id, SUM(slr.quantity)::BIGINT AS qty
         FROM user_characters uc
@@ -53,7 +51,6 @@ export const getPlannerSummary = async (
         WHERE uc.user_id = $1
         GROUP BY slr.item_id
       ),
-      -- 4. Union and re-aggregate
       all_mats AS (
         SELECT item_id, SUM(qty)::BIGINT AS total_needed
         FROM (
@@ -79,19 +76,9 @@ export const getPlannerSummary = async (
     [userId],
   );
 
-  // Total credits
-  const creditsResult = await pool.query<{ total: string }>(
+  // 2. Ascension credits
+  const ascensionCreditsResult = await pool.query<{ total: string }>(
     `SELECT (
-      COALESCE((
-        SELECT SUM(lc.credit_cost)
-        FROM user_characters uc
-        JOIN level_costs lc
-          ON lc.entity_type = 'character'
-          AND lc.level > uc.current_level
-          AND lc.level <= uc.target_level
-        WHERE uc.user_id = $1
-      ), 0)
-      +
       COALESCE((
         SELECT SUM(ast.credit_cost)
         FROM user_characters uc
@@ -104,16 +91,6 @@ export const getPlannerSummary = async (
       ), 0)
       +
       COALESCE((
-        SELECT SUM(lc.credit_cost)
-        FROM user_weapons uw
-        JOIN level_costs lc
-          ON lc.entity_type = 'weapon'
-          AND lc.level > uw.current_level
-          AND lc.level <= uw.target_level
-        WHERE uw.user_id = $1
-      ), 0)
-      +
-      COALESCE((
         SELECT SUM(ast.credit_cost)
         FROM user_weapons uw
         JOIN ascension_stages ast
@@ -123,50 +100,180 @@ export const getPlannerSummary = async (
           AND ast.stage_number <= uw.target_ascension_stage
         WHERE uw.user_id = $1
       ), 0)
-      +
-      COALESCE((
-        SELECT SUM(sl.credit_cost)
-        FROM user_characters uc
-        JOIN user_character_skills ucs ON ucs.user_character_id = uc.id
-        JOIN skill_levels sl
-          ON  sl.skill_id = ucs.skill_id
-          AND sl.level    >  ucs.current_level
-          AND sl.level    <= ucs.target_level
-        WHERE uc.user_id = $1
-      ), 0)
     )::TEXT AS total`,
     [userId],
   );
 
-  // Total EXP
-  const expResult = await pool.query<{ total: string }>(
-    `SELECT (
+  // 3. Skill credits
+  const skillCreditsResult = await pool.query<{ total: string }>(
+    `SELECT COALESCE((
+      SELECT SUM(sl.credit_cost)
+      FROM user_characters uc
+      JOIN user_character_skills ucs ON ucs.user_character_id = uc.id
+      JOIN skill_levels sl
+        ON  sl.skill_id = ucs.skill_id
+        AND sl.level    >  ucs.current_level
+        AND sl.level    <= ucs.target_level
+      WHERE uc.user_id = $1
+    ), 0)::TEXT AS total`,
+    [userId],
+  );
+
+  // 4. Level-up EXP and Credits (split for characters)
+  type ExpCounts = { char_exp_p1: string; char_exp_p2: string; weap_exp: string; char_lvl_cred: string; weap_lvl_cred: string; };
+  const expResult = await pool.query<ExpCounts>(
+    `SELECT
+      -- Character Phase 1 EXP (Level 1-60)
       COALESCE((
         SELECT SUM(lc.exp_required)
         FROM user_characters uc
-        JOIN level_costs lc
-          ON lc.entity_type = 'character'
-          AND lc.level > uc.current_level
+        JOIN level_costs lc ON lc.entity_type = 'character'
+          AND lc.level > uc.current_level 
+          AND lc.level <= LEAST(uc.target_level, 60)
+        WHERE uc.user_id = $1
+      ), 0)::TEXT AS char_exp_p1,
+      
+      -- Character Phase 2 EXP (Level 61-90)
+      COALESCE((
+        SELECT SUM(lc.exp_required)
+        FROM user_characters uc
+        JOIN level_costs lc ON lc.entity_type = 'character'
+          AND lc.level > GREATEST(uc.current_level, 60)
           AND lc.level <= uc.target_level
         WHERE uc.user_id = $1
-      ), 0)
-      +
+      ), 0)::TEXT AS char_exp_p2,
+      
+      -- Weapon total EXP (1-90 unified)
       COALESCE((
         SELECT SUM(lc.exp_required)
         FROM user_weapons uw
-        JOIN level_costs lc
-          ON lc.entity_type = 'weapon'
+        JOIN level_costs lc ON lc.entity_type = 'weapon'
           AND lc.level > uw.current_level
           AND lc.level <= uw.target_level
         WHERE uw.user_id = $1
-      ), 0)
-    )::TEXT AS total`,
+      ), 0)::TEXT AS weap_exp,
+      
+      -- Character level-up credits
+      COALESCE((
+        SELECT SUM(lc.credit_cost)
+        FROM user_characters uc
+        JOIN level_costs lc ON lc.entity_type = 'character'
+          AND lc.level > uc.current_level
+          AND lc.level <= uc.target_level
+        WHERE uc.user_id = $1
+      ), 0)::TEXT AS char_lvl_cred,
+
+      -- Weapon level-up credits
+      COALESCE((
+        SELECT SUM(lc.credit_cost)
+        FROM user_weapons uw
+        JOIN level_costs lc ON lc.entity_type = 'weapon'
+          AND lc.level > uw.current_level
+          AND lc.level <= uw.target_level
+        WHERE uw.user_id = $1
+      ), 0)::TEXT AS weap_lvl_cred
+    `,
     [userId],
   );
 
+  const stats = expResult.rows[0];
+
+  const ascensionCredits = ascensionCreditsResult.rows[0]?.total ?? "0";
+  const skillCredits = skillCreditsResult.rows[0]?.total ?? "0";
+  const levelingCredits = String(BigInt(stats?.char_lvl_cred ?? 0) + BigInt(stats?.weap_lvl_cred ?? 0));
+  
+  const totalCredits = String(
+    BigInt(ascensionCredits) + BigInt(skillCredits) + BigInt(levelingCredits)
+  );
+
+  const totalExp = String(
+    BigInt(stats?.char_exp_p1 ?? 0) + BigInt(stats?.char_exp_p2 ?? 0) + BigInt(stats?.weap_exp ?? 0)
+  );
+
+  // 5. Expand EXP into specific items
+  const expItemNames = [
+    'Advanced Combat Record', 'Intermediate Combat Record', 'Elementary Combat Record',
+    'Advanced Cognitive Carrier', 'Elementary Cognitive Carrier',
+    'Arms INSP Set', 'Arms INSP Kit', 'Arms Inspector'
+  ];
+
+  const dbExpItems = await pool.query<{
+    item_id: number; name: string; image: string; category: string; have: number;
+  }>(
+    `SELECT i.id as item_id, i.name, i.image, i.category, COALESCE(ui.quantity, 0) as have
+     FROM items i
+     LEFT JOIN user_inventory ui ON ui.item_id = i.id AND ui.user_id = $1
+     WHERE i.name = ANY($2)`,
+    [userId, expItemNames]
+  );
+
+  const itemsMap = new Map(dbExpItems.rows.map((row) => [row.name, row]));
+  const formattedMaterials = [...materialsResult.rows];
+
+  function pushItems(totalExpVal: number, config: { name: string; val: number }[]) {
+    let remainder = totalExpVal;
+    for (let i = 0; i < config.length; i++) {
+      if (remainder <= 0) break;
+      const { name, val } = config[i];
+      const itemRow = itemsMap.get(name);
+      if (!itemRow) continue;
+
+      let count = 0;
+      if (i === config.length - 1) {
+        count = Math.ceil(remainder / val); // Last item takes the remainder ceiling
+        remainder = 0;
+      } else {
+        count = Math.floor(remainder / val);
+        remainder -= count * val;
+      }
+
+      if (count > 0) {
+        // Find if we already pushed this item (weapons and chars might overlap? No, they use diff items, but just in case)
+        const existIdx = formattedMaterials.findIndex(m => m.item_id === itemRow.item_id);
+        if (existIdx >= 0) {
+          formattedMaterials[existIdx].total_needed += count;
+          formattedMaterials[existIdx].remaining = Math.max(0, formattedMaterials[existIdx].total_needed - formattedMaterials[existIdx].have);
+        } else {
+          formattedMaterials.push({
+            item_id: itemRow.item_id,
+            name: itemRow.name,
+            image: itemRow.image,
+            category: itemRow.category,
+            total_needed: count,
+            have: itemRow.have,
+            remaining: Math.max(0, count - itemRow.have),
+          });
+        }
+      }
+    }
+  }
+
+  pushItems(Number(stats?.char_exp_p1 ?? 0), [
+    { name: 'Advanced Combat Record', val: 10000 },
+    { name: 'Intermediate Combat Record', val: 1000 },
+    { name: 'Elementary Combat Record', val: 200 }
+  ]);
+
+  pushItems(Number(stats?.char_exp_p2 ?? 0), [
+    { name: 'Advanced Cognitive Carrier', val: 10000 },
+    { name: 'Elementary Cognitive Carrier', val: 1000 }
+  ]);
+
+  pushItems(Number(stats?.weap_exp ?? 0), [
+    { name: 'Arms INSP Set', val: 10000 },
+    { name: 'Arms INSP Kit', val: 1000 },
+    { name: 'Arms Inspector', val: 200 }
+  ]);
+
   return {
-    materials: materialsResult.rows,
-    total_credits_needed: creditsResult.rows[0]?.total ?? "0",
-    total_exp_needed: expResult.rows[0]?.total ?? "0",
+    materials: formattedMaterials,
+    total_credits_needed: totalCredits,
+    total_exp_needed: totalExp,
+    credits_breakdown: {
+      ascension: ascensionCredits,
+      skills: skillCredits,
+      leveling: levelingCredits,
+    },
   };
 };
+

@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
-import { successResponse, errorResponse } from "../../lib/response.js";
-import * as userService from "../../services/userService.js";
+import { successResponse, errorResponse } from "../lib/response.js";
+import * as userService from "../services/userService.js";
 
 export const userRoutes = new Elysia({ prefix: "/users" })
 
@@ -82,4 +82,76 @@ export const userRoutes = new Elysia({ prefix: "/users" })
       console.error(error);
       return status(500, errorResponse(500, "Failed to delete user"));
     }
-  });
+  })
+
+  // POST upload profile image
+  .post(
+    "/:id/profile-image",
+    async ({ status, params, body }) => {
+      try {
+        const file = body.file as File;
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        const data = await userService.uploadProfileImage(
+          Number(params.id),
+          buffer,
+          file.type,
+          file.name,
+        );
+
+        if (!data) return status(404, errorResponse(404, "User not found"));
+        return status(
+          200,
+          successResponse(200, "Profile image uploaded", data),
+        );
+      } catch (error) {
+        console.error(error);
+        return status(
+          500,
+          errorResponse(500, "Failed to upload profile image"),
+        );
+      }
+    },
+    {
+      body: t.Object({
+        file: t.File(),
+      }),
+    },
+  )
+
+  // POST upload profile banner
+  .post(
+    "/:id/profile-banner",
+    async ({ status, params, body }) => {
+      try {
+        const file = body.file as File;
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        const data = await userService.uploadProfileBanner(
+          Number(params.id),
+          buffer,
+          file.type,
+          file.name,
+        );
+
+        if (!data) return status(404, errorResponse(404, "User not found"));
+        return status(
+          200,
+          successResponse(200, "Profile banner uploaded", data),
+        );
+      } catch (error) {
+        console.error(error);
+        return status(
+          500,
+          errorResponse(500, "Failed to upload profile banner"),
+        );
+      }
+    },
+    {
+      body: t.Object({
+        file: t.File(),
+      }),
+    },
+  );
