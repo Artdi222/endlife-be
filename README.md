@@ -6,14 +6,14 @@
 
 ## 📖 Overview
 
-This repository holds the **Backend** of the EndLife application. It is built using ElysiaJS and runs on the Bun runtime, providing incredibly fast performance and end-to-end type safety for the Next.js frontend via Eden.
+This repository holds the **Backend** of the EndLife application. It is built using ElysiaJS and runs on the Bun runtime, providing incredibly fast performance and a standardized REST API for the Next.js frontend.
 
 It serves as the main API for managing game data, user progression, ascension planner materials, and dashboard news feeds. It manages data persistency via PostgreSQL and Supabase.
 
 ## ✨ Features
 
 - **Blazing Fast performance**: Built on [Bun](https://bun.sh/) and [ElysiaJS](https://elysiajs.com/), returning responses with extremely low latency.
-- **End-to-End Type Safety**: By integrating with `@elysiajs/eden` on the client, API types and contracts are seamlessly shared, preventing interface desyncs between front and backend.
+- **Standardized Communication**: Uses a unified JSON response structure across all services, ensuring reliable data handling and error messaging for the frontend client.
 - **Modular Architecture**: Employs a clean, maintainable structure splitting responsibilities across Routes, Controllers, Services, and Middlewares.
 - **Secure Authentication**: Built-in authentication using JWT (`@elysiajs/jwt`, `@elysiajs/bearer`) and password hashing via `bcrypt`.
 - **Database Integration**: Connects with PostgreSQL / [Supabase](https://supabase.com/) to process user game state, character progression, weapons, and administrative news data.
@@ -79,9 +79,9 @@ endlife-be/
 └── tsconfig.json         # TypeScript compiler options
 ```
 
-## 🔌 API Client Usage
+## 🔌 API Communication
 
-Do not fetch endpoints using raw `fetch()` on the frontend. The system relies on Elysia's Eden client for full type safety. The backend exposes its unified `App` type through `src/index.ts`, which the frontend consumes to yield perfectly typed request parameters, headers, and response bodies.
+Frontend communication is handled through a standardized Fetch wrapper that expects the backend's unified `ApiResponse<T>` structure. The backend ensures all controllers return consistent status codes and message formats for a predictable client-side experience.
 
 ## 📄 License
 
