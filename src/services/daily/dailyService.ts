@@ -214,19 +214,19 @@ export const getGlobalProgress = async (
 
 // get sanity
 export const getSanity = async (user_id: number): Promise<SanityResult> => {
-  const result = await pool.query<SanityTracker>(
-    `SELECT * FROM sanity_tracker WHERE user_id = $1`,
+  const result = await pool.query<SanityTracker & { diff_seconds: number }>(
+    `SELECT *, EXTRACT(EPOCH FROM (NOW() - last_update)) as diff_seconds FROM sanity_tracker WHERE user_id = $1`,
     [user_id],
   );
 
-  let sanity: SanityTracker;
+  let sanity: SanityTracker & { diff_seconds: number };
 
   if (result.rows.length === 0) {
-    const init = await pool.query<SanityTracker>(
+    const init = await pool.query<SanityTracker & { diff_seconds: number }>(
       `
       INSERT INTO sanity_tracker (user_id, current_sanity, max_sanity)
       VALUES ($1, 0, 0)
-      RETURNING *
+      RETURNING *, 0 as diff_seconds
       `,
       [user_id],
     );
@@ -235,32 +235,21 @@ export const getSanity = async (user_id: number): Promise<SanityResult> => {
     sanity = result.rows[0];
   }
 
-  const now = new Date();
-  const last = new Date(sanity.last_update);
-  const diffSeconds = Math.floor((now.getTime() - last.getTime()) / 1000);
+  const diffSeconds = Math.max(0, Number(sanity.diff_seconds));
   const regen = Math.floor(diffSeconds / REGEN_SECONDS);
-  const newCurrent = Math.min(
-    sanity.current_sanity + regen,
-    sanity.max_sanity,
-  );
+  const newCurrent = Math.min(sanity.current_sanity + regen, sanity.max_sanity);
 
-  const fullInSeconds =
+  const fullInSeconds = Math.round(
     newCurrent >= sanity.max_sanity
       ? 0
       : (sanity.max_sanity - newCurrent) * REGEN_SECONDS -
-        (diffSeconds % REGEN_SECONDS);
-
-  if (newCurrent !== sanity.current_sanity) {
-    await pool.query(
-      `UPDATE sanity_tracker SET current_sanity = $1, last_update = NOW() WHERE user_id = $2`,
-      [newCurrent, user_id],
-    );
-  }
+        (diffSeconds % REGEN_SECONDS)
+  );
 
   return {
     current_sanity: newCurrent,
     max_sanity: sanity.max_sanity,
-    full_in_seconds: Math.max(0, fullInSeconds),
+    full_in_seconds: fullInSeconds,
   };
 };
 

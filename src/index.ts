@@ -59,8 +59,12 @@ const app = new Elysia()
   // ascension — user planner (self-contained authMiddleware inside, user.user_id is safe)
   .use(userPlannerRoutes)
 
-  .listen(3001);
+  .listen({
+    port: Number(process.env.PORT) || 3001,
+    // So phones on the same Wi‑Fi can reach the API (Expo Go). `localhost` on the phone is the phone, not your PC.
+    hostname: process.env.HOST ?? "0.0.0.0",
+  });
 
 console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`,
+  `🦊 Elysia is running at http://${app.server?.hostname}:${app.server?.port}`,
 );
