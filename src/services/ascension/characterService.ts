@@ -78,7 +78,7 @@ export const updateCharacter = async (
 // upload character media
 export const uploadCharacterMedia = async (
   id: number,
-  field: "icon" | "splash_art" | "video_enter" | "video_idle",
+  field: "icon" | "splash_art" | "video_enter" | "video_idle" | "card_image",
   fileBuffer: Buffer,
   mimeType: string,
   fileName: string,
@@ -91,6 +91,7 @@ export const uploadCharacterMedia = async (
     splash_art: "splash_art",
     video_enter: "video_enter",
     video_idle: "video_idle",
+    card_image: "card",
   };
   const folder = folderMap[field];
   const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -118,7 +119,7 @@ export const uploadCharacterMedia = async (
 
 // delete character
 export const deleteCharacter = async (id: number): Promise<boolean> => {
-  const imageFolders = ["icon", "splash_art"];
+  const imageFolders = ["icon", "splash_art", "card"];
   const videoFolders = ["video_enter", "video_idle"];
 
   for (const folder of imageFolders) {

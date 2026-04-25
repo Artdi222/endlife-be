@@ -25,7 +25,8 @@ export const getUserCharacters = async (
       c.icon    AS character_icon,
       c.rarity  AS character_rarity,
       c.element AS character_element,
-      c.class   AS character_class
+      c.class   AS character_class,
+      c.card_image AS character_card_image
       FROM user_characters uc
       JOIN characters c ON c.id = uc.character_id
       WHERE uc.user_id = $1
@@ -46,7 +47,8 @@ export const getUserCharacterById = async (
       c.icon    AS character_icon,
       c.rarity  AS character_rarity,
       c.element AS character_element,
-      c.class   AS character_class
+      c.class   AS character_class,
+      c.card_image AS character_card_image
       FROM user_characters uc
       JOIN characters c ON c.id = uc.character_id
       WHERE uc.id = $1`,

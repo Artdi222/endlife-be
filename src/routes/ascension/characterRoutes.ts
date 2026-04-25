@@ -112,6 +112,7 @@ export const characterRoutes = new Elysia({ prefix: "/characters" })
         field: t.Union([
           t.Literal("icon"),
           t.Literal("splash_art"),
+          t.Literal("card_image"),
           t.Literal("video_enter"),
           t.Literal("video_idle"),
         ]),

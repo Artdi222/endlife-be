@@ -12,6 +12,7 @@ export interface Character {
   splash_art: string | null;
   video_enter: string | null;
   video_idle: string | null;
+  card_image: string | null;
   order_index: number;
 }
 
@@ -40,11 +41,12 @@ export interface UpdateCharacterDTO {
   splash_art?: string;
   video_enter?: string;
   video_idle?: string;
+  card_image?: string;
   order_index?: number;
 }
 
 export interface UploadMediaDTO {
   bucket: "characters" | "videos";
   folder: string;
-  field: "icon" | "splash_art" | "video_enter" | "video_idle";
+  field: "icon" | "splash_art" | "video_enter" | "video_idle" | "card_image";
 }

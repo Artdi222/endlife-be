@@ -17,6 +17,7 @@ export interface UserCharacterWithDetails extends UserCharacter {
   character_rarity: number;
   character_element: string;
   character_class: string | null;
+  character_card_image: string | null;
 }
 
 // ─── USER CHARACTER SKILL ─────────────────────────────────────────────────────
